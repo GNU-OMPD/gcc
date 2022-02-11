@@ -1,3 +1,30 @@
+2022-02-11  Mohamed Atef  <mohamedatef1698@gmail.com>
+
+        * Makefile.am (toolexeclib_LTLIBRARIES): Add libgompd.la.
+        (libgompd_la_LDFLAGS, libgompd_la_DEPENDENCIES, libgompd_la_LINK,
+        libgompd_la_SOURCES, libgompd_version_dep, libgompd_version_script,
+        libgompd.ver-sun, libgompd.ver, libgompd_version_info): Defined. 
+        * Makefile.in: Regenerate.
+        * aclocal.m4: Regenerate.
+        * config/darwin/plugin-suffix.h: Removed ().
+        * config/hpux/plugin-suffix.h: Removed ().
+        * config/posix/plugin-suffix.h: Removed ().
+        * configure: Regenerate.
+        * env.c: (#include "ompd-support.h") : Added.
+        (initialize_env) : Call ompd_load().
+        * parallel.c:(#include "ompd-support.h"): Added.
+        (GOMP_parallel) : Call ompd_bp_parallel_begin and ompd_bp_parallel_end.
+        * libgomp.map: Add OMP_5.0.3 symobl versions.
+        * libgompd.map: New file.
+        * omp-tools.h : New file.
+        * omp-types.h : New file.
+        * ompd-support.h : New file.
+        * ompd-support.c : New file.
+        * ompd-helper.h : New file.
+        * ompd-helper.c: New file.
+        * ompd-init.c: New file.
+        * testsuite/Makfile.in: Regenerate.
+
 2022-02-04  Tobias Burnus  <tobias@codesourcery.com>
 
 	* testsuite/libgomp.fortran/allocate-1.f90: Remove spurious
