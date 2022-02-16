@@ -101,7 +101,7 @@ libgomp_la_SOURCES += openacc.f90
 endif
 
 nodist_noinst_HEADERS = libgomp_f.h
-nodist_libsubinclude_HEADERS = omp.h openacc.h acc_prof.h
+nodist_libsubinclude_HEADERS = omp.h openacc.h acc_prof.h omp-tools.h ompd-types.h
 if USE_FORTRAN
 nodist_finclude_HEADERS = omp_lib.h omp_lib.f90 omp_lib.mod omp_lib_kinds.mod \
 	openacc_lib.h openacc.f90 openacc.mod openacc_kinds.mod

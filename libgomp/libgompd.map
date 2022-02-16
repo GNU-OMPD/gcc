@@ -3,10 +3,10 @@ OMPD_5.1 {
 	ompd_initialize;
 	ompd_get_api_version;
 	ompd_get_version_string;
-	ompd_get_finalize;
 	ompd_process_initialize;
 	ompd_device_initialize;
 	ompd_rel_address_space_handle;
+	ompd_finalize;
   local:
   	*;
 };

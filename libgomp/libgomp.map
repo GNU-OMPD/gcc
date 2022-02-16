@@ -232,6 +232,8 @@ OMP_5.0.3 {
   	ompd_dll_locations_valid;
   	ompd_bp_parallel_begin;
   	ompd_bp_parallel_end;
+  local:
+  	*;
 }OMP_5.0.2;
 
 GOMP_1.0 {

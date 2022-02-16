@@ -34,6 +34,7 @@
 
 __UINT64_TYPE__ ompd_state;
 ompd_device_type_sizes_t target_sizes;
+const ompd_callbacks_t *callbacks;
 
 ompd_rc_t
 ompd_initialize(ompd_word_t api_version,
@@ -67,6 +68,8 @@ ompd_get_api_version(ompd_word_t *version)
 ompd_rc_t
 ompd_get_version_string(const char **string)
 {
+	if(string == NULL)
+		return ompd_rc_bad_input;
 	static const char tmp_string[] = 
 		"GNU OpenMP runtime implementing OMPD version "
 			stringize(VERSION) " Debugging library.";

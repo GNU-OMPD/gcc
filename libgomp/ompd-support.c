@@ -23,6 +23,7 @@
 
 
 const char **ompd_dll_locations = NULL;
+__UINT64_TYPE__ ompd_state;
 
 void 
 ompd_load()
@@ -31,7 +32,7 @@ ompd_load()
 	if(ompd_initialized)
 		return;
 	static const char *tmp_ompd_dll_locations[2] 
-		= {"ligompd" SONAME_SUFFIX(1) , NULL};
+		= {"libgompd" SONAME_SUFFIX(1) , NULL};
 	const char *gomp_env_var = getenv("GOMP_DEBUG");
 	if(gomp_env_var != NULL && !strcmp(gomp_env_var, "1"))
 	{
