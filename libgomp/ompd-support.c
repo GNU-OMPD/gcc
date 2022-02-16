@@ -31,14 +31,10 @@ ompd_load()
 	static int ompd_initialized = 0;
 	if(ompd_initialized)
 		return;
+	fprintf(stderr, "OMP OMPD active\n");
 	static const char *tmp_ompd_dll_locations[2] 
 		= {"libgompd" SONAME_SUFFIX(1) , NULL};
-	const char *gomp_env_var = getenv("GOMP_DEBUG");
-	if(gomp_env_var != NULL && !strcmp(gomp_env_var, "1"))
-	{
-		fprintf(stderr, "OMP OMPD active\n");
-		ompd_state |= OMPD_ENABLED;
-	}
+	ompd_state |= OMPD_ENABLED;
 	ompd_initialized = 1;
 	ompd_dll_locations = (const char **)malloc(2 * sizeof(const char *));
 	ompd_dll_locations[0] = tmp_ompd_dll_locations[0];

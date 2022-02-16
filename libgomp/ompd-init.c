@@ -33,7 +33,6 @@
 /*Per OMPD initialization and finalization.  */
 
 __UINT64_TYPE__ ompd_state;
-ompd_device_type_sizes_t target_sizes;
 const ompd_callbacks_t *callbacks;
 
 ompd_rc_t
@@ -115,11 +114,12 @@ ompd_process_initialize(ompd_address_space_context_t *context,
 
 	ret = callbacks->alloc_memory(sizeof(ompd_address_space_handle_t),
 			(void **)(handle));
+	
 
 	if(ret != ompd_rc_ok)
 		return ret;
 
-	if(*handle == NULL)
+	if(handle == NULL)
 		return ompd_rc_error;
 
 	(*handle)->context = context;

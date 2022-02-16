@@ -24,6 +24,7 @@
 
 #include "ompd-helper.h"
 
+ompd_device_type_sizes_t target_sizes;
 
 ompd_rc_t
 get_sizes(ompd_address_space_context_t *context)

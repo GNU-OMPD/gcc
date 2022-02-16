@@ -1484,7 +1484,8 @@ initialize_env (void)
 	= thread_limit_var > INT_MAX ? UINT_MAX : thread_limit_var;
     }
   parse_int_secure ("GOMP_DEBUG", &gomp_debug_var, true);
-  ompd_load();
+  if(gomp_debug_var)
+  		ompd_load();
 #ifndef HAVE_SYNC_BUILTINS
   gomp_mutex_init (&gomp_managed_threads_lock);
 #endif
