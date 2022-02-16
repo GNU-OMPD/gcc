@@ -16,8 +16,8 @@
         (GOMP_parallel) : Call ompd_bp_parallel_begin and ompd_bp_parallel_end.
         * libgomp.map: Add OMP_5.0.3 symobl versions.
         * libgompd.map: New file.
-        * omp-tools.h : New file.
-        * omp-types.h : New file.
+        * omp-tools.h.in : New file.
+        * omp-types.h.in : New file.
         * ompd-support.h : New file.
         * ompd-support.c : New file.
         * ompd-helper.h : New file.
