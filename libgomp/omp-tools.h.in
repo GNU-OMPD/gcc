@@ -65,12 +65,12 @@ typedef struct _ompd_task_handle ompd_task_handle_t;
 
 typedef enum ompd_scope_t
 {
-	ompd_scope_global		    = 1,
-	ompd_scope_address_space = 2,
-	ompd_scope_thread		    = 3,
-	ompd_scope_parallel		 = 4,
-	ompd_scope_implicit_task = 5,
-	ompd_scope_task          = 6
+	ompd_scope_global		    	= 1,
+	ompd_scope_address_space 	= 2,
+	ompd_scope_thread		    	= 3,
+	ompd_scope_parallel		 		= 4,
+	ompd_scope_implicit_task 	= 5,
+	ompd_scope_task          	= 6
 } ompd_scope_t;
 
 typedef __UINT64_TYPE__ ompd_icv_id_t;
@@ -110,7 +110,7 @@ typedef struct ompd_device_type_sizes_t
 typedef ompd_rc_t (*ompd_callback_memory_alloc_fn_t) (ompd_size_t, void **);
 typedef ompd_rc_t (*ompd_callback_memory_free_fn_t) (void *);
 
-typedef ompd_rc_t (*ompd_callback_get_thread_context_for_thread_id_fn_t) 
+typedef ompd_rc_t (*ompd_callback_get_thread_context_for_thread_id_fn_t)
 	(ompd_address_space_context_t *, ompd_thread_id_t,
 	ompd_size_t, const void *, ompd_thread_context_t **);
 
@@ -119,7 +119,7 @@ typedef ompd_rc_t (*ompd_callback_sizeof_fn_t)
 	(ompd_address_space_context_t *, ompd_device_type_sizes_t *);
 
 
-typedef ompd_rc_t (*ompd_callback_symbol_addr_fn_t) 
+typedef ompd_rc_t (*ompd_callback_symbol_addr_fn_t)
 	(ompd_address_space_context_t *, ompd_thread_context_t *,
 	const char *, ompd_address_t *, const char *);
 
@@ -139,7 +139,7 @@ typedef ompd_rc_t (*ompd_callback_device_host_fn_t)
 
 typedef ompd_rc_t (*ompd_callback_print_string_fn_t) (const char *, int);
 
-typedef struct ompd_callbacks_t 
+typedef struct ompd_callbacks_t
 {
 	ompd_callback_memory_alloc_fn_t alloc_memory;
 	ompd_callback_memory_free_fn_t free_memory;
@@ -163,11 +163,11 @@ ompd_rc_t ompd_get_version_string(const char **);
 
 ompd_rc_t ompd_finalize(void);
 
-ompd_rc_t ompd_process_initialize 
+ompd_rc_t ompd_process_initialize
 	(ompd_address_space_context_t *, ompd_address_space_handle_t **);
 
 
-ompd_rc_t ompd_device_initialize 
+ompd_rc_t ompd_device_initialize
 	(ompd_address_space_handle_t *, ompd_address_space_context_t *,
 	ompd_device_t, ompd_size_t, void *, ompd_address_space_handle_t **);
 
@@ -175,7 +175,7 @@ ompd_rc_t ompd_rel_address_space_handle(ompd_address_space_handle_t *);
 
 ompd_rc_t ompd_get_omp_version (ompd_address_space_handle_t *, ompd_word_t *);
 
-ompd_rc_t ompd_get_omp_version_string (ompd_address_space_handle_t *, 
+ompd_rc_t ompd_get_omp_version_string (ompd_address_space_handle_t *,
 	const char **);
 
 
@@ -246,7 +246,7 @@ ompd_rc_t ompd_get_display_control_vars (ompd_address_space_handle_t *,
 ompd_rc_t ompd_rel_display_control_vars (const char * const **);
 
 ompd_rc_t ompd_enumerate_icvs (ompd_address_space_handle_t *, ompd_icv_id_t,
-	ompd_icv_id_t *, const char **, ompd_scope_t *,int *);
+	ompd_icv_id_t *, const char **, ompd_scope_t *, int *);
 
 ompd_rc_t ompd_get_icv_from_scope (void *, ompd_scope_t, ompd_icv_id_t,
 	ompd_word_t *);
