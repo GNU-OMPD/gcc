@@ -71,6 +71,16 @@ typedef struct _ompd_task_handle
 	ompd_address_t *th;
 }ompd_task_handle_t;
 
+// naive way to read from memory
+// context => 
+// thread_context => 
+// name   	=> varaiable to read 
+// output 	=> destination buffer  
+// in_buf 	=> buffer that put the readed data in and then can used to
+//  		   be casting to host 
+// size   	=> n bytes should be read 
+// coutn  	=> how many elemnt to read  
+// ret 	  	=> ompd_rc_t type 
 #define GET_VALUE(context, thread_context, name, output, in_buf, size, count,	\
 	 ret) 																																			\
 	do {																											 		  						\
