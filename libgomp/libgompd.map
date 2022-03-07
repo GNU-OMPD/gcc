@@ -10,6 +10,8 @@ OMPD_5.1 {
 	ompd_enumerate_icvs;
 	ompd_get_icv_from_scope;
 	ompd_get_icv_string_from_scope;
+  ompd_get_thread_handle;
+  ompd_get_thread_in_parallel;
   local:
   	*;
 };
