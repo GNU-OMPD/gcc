@@ -20,7 +20,8 @@
 
 
 
-/*This file contains the helper functions for OMPD.  */
+/* This file contains data types and declarations of functions that are not
+	provided by the book but we find them necessary.  */
 
 #ifndef _OMPD_HELPER_H
 #define _OMPD_HELPER_H
@@ -34,6 +35,7 @@ extern "C" {
 #include "ompd-types.h"
 #include <stdio.h>
 #include <stddef.h>
+#include <string.h>
 
 #define stringize(x)  stringize1(x)
 #define stringize1(x) #x
@@ -44,15 +46,96 @@ extern const ompd_callbacks_t *callbacks;
 extern __UINT64_TYPE__ ompd_state;
 extern ompd_device_type_sizes_t target_sizes;
 
-
-ompd_rc_t get_sizes(ompd_address_space_context_t *);
-
-
-
-struct _ompd_aspace_handle
+typedef struct _ompd_aspace_handle
 {
 	ompd_address_space_context_t *context;
 	ompd_device_t kind;
+}ompd_address_space_handle_t;
+
+typedef struct _ompd_thread_handle
+{
+	ompd_address_space_handle_t *ah;
+	ompd_thread_context_t *thread_context;
+	ompd_address_t *th;
+}ompd_thread_handle_t;
+
+typedef struct _ompd_parallel_handle
+{
+	ompd_address_space_handle_t *ah;
+	ompd_address_t *th;
+}ompd_parallel_handle_t;
+
+typedef struct _ompd_task_handle
+{
+	ompd_address_space_handle_t *ah;
+	ompd_address_t *th;
+}ompd_task_handle_t;
+
+#define GET_VALUE(context, thread_context, name, output, in_buf, size, count,	\
+	 ret) 																																			\
+	do {																											 		  						\
+		ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};								\
+		ret = callbacks->symbol_addr_lookup(context, thread_context,	  					\
+			name, &symbol_addr, NULL);																							\
+		ret = callbacks->read_memory(context, thread_context, &symbol_addr,	size,	\
+			&in_buf);																																\
+		ret = callbacks->device_to_host(context, &in_buf, size, count, &output);	\
+	} while(0)																																	\
+
+
+#define CHECK(ah)													\
+	do{																			\
+		if(ah == NULL || ah->context == NULL)	\
+			return ompd_rc_stale_handle;				\
+		if(callbacks == NULL)									\
+			return ompd_rc_callback_error;			\
+	}while(0)
+
+
+
+/* (var_name, string_name, scope).  */
+#define FOREACH_OMPD_ICV(ompd_icv) \
+	ompd_icv(nthread_var, "nthread var", ompd_scope_thread) \
+	ompd_icv(thread_limit_var, "thread limit var", ompd_scope_task) \
+	ompd_icv(run_sched_var, "run sched limit var", ompd_scope_task) \
+	ompd_icv(run_sched_chunk_size, "run sched chunk size var", ompd_scope_task) \
+	ompd_icv(default_device_var, "default device var", ompd_scope_thread) \
+	ompd_icv(dyn_var, "dynamic var", ompd_scope_thread) \
+	ompd_icv(max_active_levels_var, "max active level var", ompd_scope_task) \
+	ompd_icv(bind_var, "proc bind var", ompd_scope_task) \
+	ompd_icv(cancellation_var, "cancel var", ompd_scope_address_space) \
+	ompd_icv(max_task_priority_var, "max task priority var", \
+		ompd_scope_address_space) \
+	ompd_icv(stacksize_var, "stack size var", ompd_scope_address_space) \
+	ompd_icv(debug_var, "debug var", ompd_scope_address_space) \
+	ompd_icv(display_affinity_var, "display affinity var", \
+		ompd_scope_address_space) \
+	ompd_icv(affinity_format_var, "affinity format var", \
+		ompd_scope_address_space) \
+	ompd_icv(affinity_format_len_var, "affinity format len var", \
+		ompd_scope_address_space) \
+	ompd_icv(wait_policy_var, "wait policy var", ompd_scope_address_space) \
+	ompd_icv(num_teams_var, "num teams var", ompd_scope_address_space) \
+	ompd_icv(teams_thread_limit_var, "teams thread limit var", \
+		ompd_scope_address_space) \
+	ompd_icv(spin_count_var, "spin count var", ompd_scope_address_space) \
+	ompd_icv(num_proc_var, "num proc var", ompd_scope_address_space) \
+	ompd_icv(throttled_spin_count_var, "throttled spin count var", \
+		ompd_scope_address_space)	\
+	ompd_icv(managed_threads_var, "managed threads var", \
+		ompd_scope_address_space) \
+	ompd_icv(thread_num_var, "thread num var", ompd_scope_thread) \
+	ompd_icv(final_task_var, "final task var", ompd_scope_task) \
+	ompd_icv(implicit_task_var, "implicit task var", ompd_scope_task) \
+	ompd_icv(team_size_var, "team size var", ompd_scope_parallel)
+
+enum ompd_icv
+{
+	ompd_icv_undefined_var = 0,
+	#define ompd_icv_iterator(var_name, string_name, scope) ompd_icv_##var_name,
+		FOREACH_OMPD_ICV(ompd_icv_iterator)
+	#undef ompd_icv_iterator
+	ompd_last_icv_var
 };
 
 struct _ompd_thread_handle
@@ -66,6 +149,47 @@ typedef struct _ompd_parallel_handle {
   ompd_address_space_handle_t *ah;
   ompd_address_t th;  /* target handle */
 } ompd_parallel_handle_t;
+ompd_rc_t get_sizes(ompd_address_space_context_t *);
+
+
+/* Get per task internal control variables.  */
+ompd_rc_t ompd_get_nthread(ompd_thread_handle_t *, ompd_word_t *);
+ompd_rc_t ompd_get_thread_limit(ompd_task_handle_t *, ompd_word_t *);
+ompd_rc_t ompd_get_run_sched(ompd_task_handle_t *,  ompd_word_t *);
+ompd_rc_t ompd_get_run_sched_chunk_size(ompd_task_handle_t *, ompd_word_t *);
+ompd_rc_t ompd_get_default_device(ompd_thread_handle_t *, ompd_word_t *);
+ompd_rc_t ompd_get_dynamic(ompd_thread_handle_t *, ompd_word_t *);
+ompd_rc_t ompd_get_max_active_levels(ompd_task_handle_t *, ompd_word_t *);
+ompd_rc_t ompd_get_proc_bind(ompd_task_handle_t *, ompd_word_t *);
+ompd_rc_t ompd_is_final(ompd_task_handle_t *, ompd_word_t *);
+ompd_rc_t ompd_is_implicit(ompd_task_handle_t *, ompd_word_t *);
+ompd_rc_t ompd_get_team_size(ompd_parallel_handle_t *, ompd_word_t *);
+
+
+/* Get Global ICVs.  */
+ompd_rc_t ompd_get_cancellation(ompd_address_space_handle_t *, ompd_word_t *);
+ompd_rc_t ompd_get_max_task_priority(ompd_address_space_handle_t *,
+	ompd_word_t *);
+ompd_rc_t ompd_get_stacksize(ompd_address_space_handle_t *, ompd_word_t *);
+ompd_rc_t ompd_get_debug(ompd_address_space_handle_t *, ompd_word_t *);
+ompd_rc_t ompd_get_display_affinity(ompd_address_space_handle_t *,
+	ompd_word_t *);
+ompd_rc_t ompd_get_affinity_format(ompd_address_space_handle_t *,
+	const char **);
+ompd_rc_t ompd_get_affinity_format_len(ompd_address_space_handle_t *,
+	ompd_word_t *);
+ompd_rc_t ompd_get_wait_policy(ompd_address_space_handle_t *, ompd_word_t *);
+ompd_rc_t ompd_get_num_teams(ompd_address_space_handle_t *, ompd_word_t *);
+ompd_rc_t ompd_get_teams_thread_limit(ompd_address_space_handle_t *,
+	ompd_word_t *);
+ompd_rc_t ompd_get_spin_count(ompd_address_space_handle_t *, ompd_word_t *);
+ompd_rc_t ompd_get_available_cpus(ompd_address_space_handle_t *, ompd_word_t *);
+ompd_rc_t ompd_get_throttled_spin_count(ompd_address_space_handle_t *,
+	ompd_word_t *);
+ompd_rc_t ompd_get_managed_threads(ompd_address_space_handle_t *,
+	ompd_word_t *);
+/*End of Global ICVs.  */
+
 #ifdef __cplusplus
 } // extern C
 #endif

@@ -24,7 +24,7 @@
 
 
 
-/*This file contains the implementation of functions defined in
+/* This file contains the implementation of functions defined in
 	section 5.5.1, 5.5.2.  */
 
 
@@ -101,22 +101,12 @@ ompd_process_initialize(ompd_address_space_context_t *context,
 	if(ret != ompd_rc_ok)
 		return ret;
 
-	ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
-
-
 	//naive way to read from memory
-	ret = callbacks->symbol_addr_lookup(context, NULL, "ompd_state",
-			&symbol_addr, NULL);
-
-	ret = callbacks->read_memory(context, NULL, &symbol_addr,
-			target_sizes.sizeof_long_long, &ompd_state);
-
-	ret = callbacks->device_to_host(context, &ompd_state,
-			target_sizes.sizeof_long_long, 1, &ompd_state);
+	GET_VALUE(context, NULL, "ompd_state", ompd_state, ompd_state,
+		target_sizes.sizeof_long_long, 1, ret);
 
 	ret = callbacks->alloc_memory(sizeof(ompd_address_space_handle_t),
 			(void **)(handle));
-
 
 	if(ret != ompd_rc_ok)
 		return ret;

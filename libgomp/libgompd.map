@@ -7,6 +7,9 @@ OMPD_5.1 {
 	ompd_device_initialize;
 	ompd_rel_address_space_handle;
 	ompd_finalize;
+  ompd_enumerate_icvs;
+  ompd_get_icv_from_scope;
+  ompd_get_icv_string_from_scope;
   ompd_get_thread_in_parallel;
   ompd_get_thread_handle;
   local:
