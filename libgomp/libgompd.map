@@ -7,6 +7,8 @@ OMPD_5.1 {
 	ompd_device_initialize;
 	ompd_rel_address_space_handle;
 	ompd_finalize;
+  ompd_get_thread_in_parallel;
+  ompd_get_thread_handle;
   local:
   	*;
 };

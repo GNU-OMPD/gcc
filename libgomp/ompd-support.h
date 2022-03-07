@@ -32,13 +32,27 @@
 #include <stdio.h>
 #include <stddef.h>
 
+
+#if OMPD_SUPPORT
+
 void ompd_load();
 extern __UINT64_TYPE__ ompd_state;
 
-#define OMPD_ENABLED 0x1
+
+#define OMPD_FOREACH_ACCESS(OMPD_ACCESS) \
+OMPD_ACCESS(gomp_thread_pool, threads) \
+OMPD_ACCESS(gomp_thread, handle) \
+OMPD_ACCESS(gomp_thread, thread_pool)
+
+#define OMPD_FOREACH_SIZEOF(OMPD_SIZEOF) \
+OMPD_SIZEOF(int) \
+OMPD_SIZEOF(char) \
+OMPD_SIZEOF(ompd_state) \
+OMPD_SIZEOF(ompd_thread_id_t) \
+OMPD_SIZEOF(gomp_tls_key) \
+OMPD_SIZEOF(gomp_tls_data) \
 
 
 
-
-
+#endif /* OMPD_SUPPORT */
 #endif /* _OMPD_SUPPORT_H */

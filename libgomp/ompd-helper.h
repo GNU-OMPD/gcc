@@ -38,7 +38,7 @@ extern "C" {
 #define stringize(x)  stringize1(x)
 #define stringize1(x) #x
 
-#define VERSION 202011
+#define VERSION 202011	/*YYYYMM*/
 
 extern const ompd_callbacks_t *callbacks;
 extern __UINT64_TYPE__ ompd_state;
@@ -55,9 +55,17 @@ struct _ompd_aspace_handle
 	ompd_device_t kind;
 };
 
+struct _ompd_thread_handle
+{
+	ompd_address_space_handle_t *ah;
+  ompd_thread_context_t *thread_context;
+  ompd_address_t th; /* target handle */
+};
 
-
-
+typedef struct _ompd_parallel_handle {
+  ompd_address_space_handle_t *ah;
+  ompd_address_t th;  /* target handle */
+} ompd_parallel_handle_t;
 #ifdef __cplusplus
 } // extern C
 #endif
