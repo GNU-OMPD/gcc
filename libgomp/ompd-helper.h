@@ -71,24 +71,24 @@ typedef struct _ompd_task_handle
 	ompd_address_t *th;
 }ompd_task_handle_t;
 
-#define GET_VALUE(context, thread_context, name, output, in_buf, size, count,	\
-	 ret) 																																			\
-	do {																											 		  						\
-		ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};								\
-		ret = callbacks->symbol_addr_lookup(context, thread_context,	  					\
-			name, &symbol_addr, NULL);																							\
-		ret = callbacks->read_memory(context, thread_context, &symbol_addr,	size,	\
-			&in_buf);																																\
-		ret = callbacks->device_to_host(context, &in_buf, size, count, &output);	\
-	} while(0)																																	\
+#define GET_VALUE(context, thread_context, name, output, in_buf, size, count, \
+	 ret)                                                                      \
+	do {	                                                                     \
+		ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};             \
+		ret = callbacks->symbol_addr_lookup(context, thread_context,            \
+			name, &symbol_addr, NULL);                                           \
+		ret = callbacks->read_memory(context, thread_context, &symbol_addr, size, \
+			&in_buf);                                                               \
+		ret = callbacks->device_to_host(context, &in_buf, size, count, &output);   \
+	} while(0)                                                                    \
 
 
-#define CHECK(ah)													\
-	do{																			\
-		if(ah == NULL || ah->context == NULL)	\
-			return ompd_rc_stale_handle;				\
-		if(callbacks == NULL)									\
-			return ompd_rc_callback_error;			\
+#define CHECK(ah)	\
+	do{   \
+		if(ah == NULL || ah->context == NULL) \
+			return ompd_rc_stale_handle; \
+		if(callbacks == NULL) \
+			return ompd_rc_callback_error; \
 	}while(0)
 
 

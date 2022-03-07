@@ -1485,7 +1485,7 @@ initialize_env (void)
     }
   parse_int_secure ("GOMP_DEBUG", &gomp_debug_var, true);
   if(gomp_debug_var)
-  		ompd_load();
+  	ompd_load();
 #ifndef HAVE_SYNC_BUILTINS
   gomp_mutex_init (&gomp_managed_threads_lock);
 #endif

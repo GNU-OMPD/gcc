@@ -27,6 +27,7 @@
 
 #include "omp-tools.h"
 #include "plugin-suffix.h"
+#include "libgomp.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -37,8 +38,21 @@ extern __UINT64_TYPE__ ompd_state;
 
 #define OMPD_ENABLED 0x1
 
+#define OMPD_FOREACH_ACCESS(ompd_access) \
+   ompd_access(gomp_task_icv, nthreads_var) \
+   ompd_access(gomp_task_icv, run_sched_var) \
+   ompd_access(gomp_task_icv, run_sched_chunk_size) \
+   ompd_access(gomp_task_icv, default_device_var) \
+   ompd_access(gomp_task_icv, thread_limit_var) \
+   ompd_access(gomp_task_icv, dyn_var) \
+   ompd_access(gomp_task_icv, bind_var) \
+   ompd_access(gomp_thread, task)
 
 
+#define OMPD_SIZES(ompd_size) \
+   ompd_size(gomp_thread) \
+   ompd_size(gomp_task_icv) \
+   ompd_size(gomp_task) 
 
 
 #endif /* _OMPD_SUPPORT_H */

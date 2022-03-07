@@ -21,6 +21,20 @@
 #include "ompd-support.h"
 
 
+#define ompd_declare_access(t, m) __UINT64_TYPE__ ompd_access_##t##_##m;
+	OMPD_FOREACH_ACCESS(ompd_declare_access)
+#undef ompd_declare_access
+
+
+#define ompd_declare_sizeof_members(t, m) __UINT64_TYPE__ ompd_sizeof_##t##_##m;
+	OMPD_FOREACH_ACCESS(ompd_declare_sizeof_members)
+#undef ompd_declare_sizeof_members
+
+
+#define ompd_declare_sizes(t) __UINT64_TYPE__ ompd_sizeof_##t;
+	OMPD_SIZES(ompd_declare_sizes)
+#undef ompd_declare_sizes
+
 
 const char **ompd_dll_locations = NULL;
 __UINT64_TYPE__ ompd_state;
@@ -31,6 +45,27 @@ ompd_load()
 	static int ompd_initialized = 0;
 	if(ompd_initialized)
 		return;
+
+	/* Get the offset of the struct members.  */
+	#define ompd_init_access(t, m)                \
+  		ompd_access_##t##_##m = (__UINT64_TYPE__) & (((struct t *)0)->m);
+ 		OMPD_FOREACH_ACCESS(ompd_init_access)
+	#undef ompd_init_access
+
+
+	/* Get sizeof members.  */
+
+	#define ompd_init_sizeof_members(t, m) \
+		ompd_sizeof_##t##_##m = sizeof(((struct t *)NULL)->m);
+		OMPD_FOREACH_ACCESS(ompd_init_sizeof_members)
+	#undef ompd_declare_sizeof_members
+
+
+	#define ompd_init_sizes(t) ompd_sizeof_##t = sizeof(struct t);
+		OMPD_SIZES(ompd_init_sizes)
+	#undef ompd_init_sizes
+
+
 	fprintf(stderr, "OMP OMPD active\n");
 	static const char *tmp_ompd_dll_locations[2] 
 		= {"libgompd" SONAME_SUFFIX(1) , NULL};
