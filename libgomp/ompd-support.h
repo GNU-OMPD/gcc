@@ -46,7 +46,8 @@ extern __UINT64_TYPE__ ompd_state;
    ompd_access(gomp_task_icv, thread_limit_var) \
    ompd_access(gomp_task_icv, dyn_var) \
    ompd_access(gomp_task_icv, bind_var) \
-   ompd_access(gomp_thread, task)
+   ompd_access(gomp_thread, task) \
+   ompd_access(gomp_thread_pool, threads)
 
 
 #define OMPD_SIZES(ompd_size) \
