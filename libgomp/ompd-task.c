@@ -78,7 +78,7 @@ ompd_get_generating_task_handle( ompd_task_handle_t *task_handle,
   if (!callbacks) 
       return ompd_rc_callback_error;
 
-   ompd_address_t *task_pointer = task_handle->th ;
+   ompd_address_t *target_addr = task_handle->th ;
    ompd_address_t *temp_parent_address ;
    ompd_address_t *parent_address ;
 
@@ -88,8 +88,8 @@ ompd_get_generating_task_handle( ompd_task_handle_t *task_handle,
 // make the *generating_task_handle points to that location.
 
    //get the offset (address) of the parent task (gomp_task->parent) and store it in parent_address
-   ret = callbacks->symbol_addr_lookup(context, NULL, "parent", temp_parent_address, NULL);
-   ret = callbacks->read_memory(context,NULL,parent_address,target_sizes.sizeof_long_long,temp_parent_address);
+   ret = callbacks->symbol_addr_lookup(context, NULL, "parent", target_addr, NULL);
+   ret = callbacks->read_memory(context,NULL,target_addr,target_sizes.sizeof_long_long,temp_parent_address);
 	ret = callbacks->device_to_host(context, temp_parent_address, target_sizes.sizeof_long_long,1, parent_address);
 
    ompd_rc_t ret = callbacks->alloc_memory(sizeof(ompd_task_handle_t),
@@ -108,7 +108,8 @@ ompd_get_generating_task_handle( ompd_task_handle_t *task_handle,
    required : access gomp_team.implicit_tasks[thread_num]
 */
 
-ompd_rc_t ompd_get_task_in_parallel(
+ompd_rc_t
+ompd_get_task_in_parallel(
     ompd_parallel_handle_t *parallel_handle, 
     int thread_num, 
     ompd_task_handle_t **task_handle 
@@ -141,8 +142,8 @@ ompd_rc_t ompd_get_task_in_parallel(
       return ompd_rc_bad_input ;
    }
 
-   ompd_addr_t implicit_offset ; // stores the offset to get the location of gomp_team.implicit_task
-   ompd_addr_t implicit_task_address ; //stores the output reading of device to host operation
+   ompd_address_t *implicit_offset ; // stores the offset to get the location of gomp_team.implicit_task
+   ompd_address_t *implicit_task_address ; //stores the output reading of device to host operation
    
    //looking up for implicit_task array in gomp_team
    ret = callbacks->symbol_addr_lookup(context, NULL, "implicit_task", target_addr, NULL);
@@ -166,4 +167,18 @@ ompd_rc_t ompd_get_task_in_parallel(
    (*task_handle)->th = target_addr;
    (*task_handle)->ah = parallel_handle->ah;
  
+}
+
+ompd_rc_t
+ompd_rel_task_handle(
+   ompd_task_handle_t *task_handle
+){
+   if (!task_handle)
+      return ompd_rc_stale_handle;
+
+   ompd_rc_t ret = callbacks->free_memory((void *)(task_handle));
+
+   if (ret != ompd_rc_ok)
+      return ret;
+  return ompd_rc_ok;
 }
