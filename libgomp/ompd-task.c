@@ -102,3 +102,68 @@ ompd_get_generating_task_handle( ompd_task_handle_t *task_handle,
    (*generating_task_handle)->ah = task_handle->ah;
    return ret;
 }
+/*
+   input : *parallel_handle , thread_num (selects the required implicit task)
+   output: make *task_handle pointer points to where the required implicit task will be located
+   required : access gomp_team.implicit_tasks[thread_num]
+*/
+
+ompd_rc_t ompd_get_task_in_parallel(
+    ompd_parallel_handle_t *parallel_handle, 
+    int thread_num, 
+    ompd_task_handle_t **task_handle 
+) {
+
+   if (!parallel_handle)
+      return ompd_rc_stale_handle;
+   
+   if (!parallel_handle->ah)
+      return ompd_rc_stale_handle;
+
+   ompd_address_space_context_t *context = parallel_handle->ah->context;
+
+   ompd_address_t *target_addr = parallel_handle->th ; 
+   if (!context)
+      return ompd_rc_stale_handle;
+
+  if (!callbacks) 
+    return ompd_rc_callback_error;
+  
+   ompd_rc_t ret ;
+   ompd_word_t team_threads ; //stores the number of threads of the input parallel handle
+   
+   ret = ompd_get_num_threads(parallel_handle, &team_threads);
+   if(ret != ompd_rc_ok){
+      return ret ;
+   }
+   //check if the input thread_num is in the range of 0 to team_threads
+   if(thread_num <= 0 || thread_num > team_threads){
+      return ompd_rc_bad_input ;
+   }
+
+   ompd_addr_t implicit_offset ; // stores the offset to get the location of gomp_team.implicit_task
+   ompd_addr_t implicit_task_address ; //stores the output reading of device to host operation
+   
+   //looking up for implicit_task array in gomp_team
+   ret = callbacks->symbol_addr_lookup(context, NULL, "implicit_task", target_addr, NULL);
+   ret = callbacks->read_memory(context, NULL, target_addr, target_sizes.sizeof_long_long, implicit_offset);
+   ret = callbacks->device_to_host(context, NULL, target_sizes.sizeof_long_long,1, implicit_task_address);
+
+   if(ret != ompd_rc_ok){
+      return ret;
+   }
+
+   // implicit_task_address is the address of the first element of the array 
+   target_addr->address = implicit_task_address + thread_num* target_sizes.sizeof_pointer ;//address of implicit_tasks[thread_num]
+
+   ret = callbacks->alloc_memory(sizeof(ompd_task_handle_t),
+                                 (void **)(task_handle));
+
+   if (ret != ompd_rc_ok){
+      return ret;
+   }
+
+   (*task_handle)->th = target_addr;
+   (*task_handle)->ah = parallel_handle->ah;
+ 
+}
