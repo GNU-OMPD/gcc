@@ -47,6 +47,10 @@ extern __UINT64_TYPE__ ompd_state;
    ompd_access(gomp_task_icv, dyn_var) \
    ompd_access(gomp_task_icv, bind_var) \
    ompd_access(gomp_thread, task) \
+<<<<<<< Updated upstream
+=======
+   ompd_access(gomp_thread, handle) \
+>>>>>>> Stashed changes
    ompd_access(gomp_thread_pool, threads)
 
 
