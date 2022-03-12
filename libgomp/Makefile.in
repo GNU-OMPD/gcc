@@ -223,8 +223,7 @@ am_libgomp_la_OBJECTS = alloc.lo atomic.lo barrier.lo critical.lo \
 	oacc-target.lo ompd-support.lo $(am__objects_1)
 libgomp_la_OBJECTS = $(am_libgomp_la_OBJECTS)
 libgompd_la_LIBADD =
-am_libgompd_la_OBJECTS = ompd-init.lo ompd-helper.lo ompd-icv.lo \
-	ompd-thread.lo
+am_libgompd_la_OBJECTS = ompd-init.lo ompd-helper.lo ompd-icv.lo
 libgompd_la_OBJECTS = $(am_libgompd_la_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -260,15 +259,15 @@ am__depfiles_remade = ./$(DEPDIR)/affinity-fmt.Plo \
 	./$(DEPDIR)/oacc-plugin.Plo ./$(DEPDIR)/oacc-profiling.Plo \
 	./$(DEPDIR)/oacc-target.Plo ./$(DEPDIR)/ompd-helper.Plo \
 	./$(DEPDIR)/ompd-icv.Plo ./$(DEPDIR)/ompd-init.Plo \
-	./$(DEPDIR)/ompd-support.Plo ./$(DEPDIR)/ompd-thread.Plo \
-	./$(DEPDIR)/ordered.Plo ./$(DEPDIR)/parallel.Plo \
-	./$(DEPDIR)/priority_queue.Plo ./$(DEPDIR)/proc.Plo \
-	./$(DEPDIR)/ptrlock.Plo ./$(DEPDIR)/scope.Plo \
-	./$(DEPDIR)/sections.Plo ./$(DEPDIR)/sem.Plo \
-	./$(DEPDIR)/single.Plo ./$(DEPDIR)/splay-tree.Plo \
-	./$(DEPDIR)/target.Plo ./$(DEPDIR)/task.Plo \
-	./$(DEPDIR)/team.Plo ./$(DEPDIR)/teams.Plo \
-	./$(DEPDIR)/time.Plo ./$(DEPDIR)/work.Plo
+	./$(DEPDIR)/ompd-support.Plo ./$(DEPDIR)/ordered.Plo \
+	./$(DEPDIR)/parallel.Plo ./$(DEPDIR)/priority_queue.Plo \
+	./$(DEPDIR)/proc.Plo ./$(DEPDIR)/ptrlock.Plo \
+	./$(DEPDIR)/scope.Plo ./$(DEPDIR)/sections.Plo \
+	./$(DEPDIR)/sem.Plo ./$(DEPDIR)/single.Plo \
+	./$(DEPDIR)/splay-tree.Plo ./$(DEPDIR)/target.Plo \
+	./$(DEPDIR)/task.Plo ./$(DEPDIR)/team.Plo \
+	./$(DEPDIR)/teams.Plo ./$(DEPDIR)/time.Plo \
+	./$(DEPDIR)/work.Plo
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -607,7 +606,7 @@ libgomp_la_SOURCES = alloc.c atomic.c barrier.c critical.c env.c \
 	oacc-async.c oacc-plugin.c oacc-cuda.c priority_queue.c \
 	affinity-fmt.c teams.c allocator.c oacc-profiling.c \
 	oacc-target.c ompd-support.c $(am__append_3)
-libgompd_la_SOURCES = ompd-init.c ompd-helper.c ompd-icv.c ompd-thread.c
+libgompd_la_SOURCES = ompd-init.c ompd-helper.c ompd-icv.c
 
 # Nvidia PTX OpenACC plugin.
 @PLUGIN_NVPTX_TRUE@libgomp_plugin_nvptx_version_info = -version-info $(libtool_VERSION)
@@ -823,7 +822,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ompd-icv.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ompd-init.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ompd-support.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ompd-thread.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ordered.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/parallel.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/priority_queue.Plo@am__quote@ # am--include-marker
@@ -1266,7 +1264,6 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/ompd-icv.Plo
 	-rm -f ./$(DEPDIR)/ompd-init.Plo
 	-rm -f ./$(DEPDIR)/ompd-support.Plo
-	-rm -f ./$(DEPDIR)/ompd-thread.Plo
 	-rm -f ./$(DEPDIR)/ordered.Plo
 	-rm -f ./$(DEPDIR)/parallel.Plo
 	-rm -f ./$(DEPDIR)/priority_queue.Plo
@@ -1458,7 +1455,6 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/ompd-icv.Plo
 	-rm -f ./$(DEPDIR)/ompd-init.Plo
 	-rm -f ./$(DEPDIR)/ompd-support.Plo
-	-rm -f ./$(DEPDIR)/ompd-thread.Plo
 	-rm -f ./$(DEPDIR)/ordered.Plo
 	-rm -f ./$(DEPDIR)/parallel.Plo
 	-rm -f ./$(DEPDIR)/priority_queue.Plo

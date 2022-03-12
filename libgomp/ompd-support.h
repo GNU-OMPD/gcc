@@ -47,17 +47,14 @@ extern __UINT64_TYPE__ ompd_state;
    ompd_access(gomp_task_icv, dyn_var) \
    ompd_access(gomp_task_icv, bind_var) \
    ompd_access(gomp_thread, task) \
-<<<<<<< Updated upstream
-=======
    ompd_access(gomp_thread, handle) \
->>>>>>> Stashed changes
-   ompd_access(gomp_thread_pool, threads)
+   ompd_access(gomp_thread_pool, threads) \
 
 
 #define OMPD_SIZES(ompd_size) \
    ompd_size(gomp_thread) \
    ompd_size(gomp_task_icv) \
-   ompd_size(gomp_task) 
+   ompd_size(gomp_task)
 
 
 #endif /* _OMPD_SUPPORT_H */
