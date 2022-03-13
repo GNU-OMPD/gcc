@@ -47,10 +47,14 @@ extern __UINT64_TYPE__ ompd_state;
    ompd_access(gomp_task_icv, dyn_var) \
    ompd_access(gomp_task_icv, bind_var) \
    ompd_access(gomp_thread, task) \
-   ompd_access(gomp_thread, handle) \
-   ompd_access(gomp_thread_pool, threads) \
+   ompd_access(gomp_thread_pool, threads)
 
-
+  #if defined(LIBGOMP_USE_PTHREADS) \
+      && (!defined(HAVE_TLS) \
+   	  || !defined(__GLIBC__) \
+   	  || !defined(USING_INITIAL_EXEC_TLS))
+    ompd_access(gomp_thread, handle);
+  #endif
 #define OMPD_SIZES(ompd_size) \
    ompd_size(gomp_thread) \
    ompd_size(gomp_task_icv) \
