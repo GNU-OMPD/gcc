@@ -29,7 +29,7 @@
 
 
 #include "ompd-helper.h"
-#include "pthread.h"
+#include <pthread.h>
 
 
 ompd_rc_t
@@ -60,7 +60,7 @@ ompd_get_thread_in_parallel(ompd_parallel_handle_t *parallel_handle,
 
 	//get the address of gomp_thread **threads;
 	ompd_size_t temp_offset, field_offset;
-	ompd_address_t tmpAddr;
+	ompd_address_t tmp_addr;
 	ompd_address_t taddr = {OMPD_SEGMENT_UNSPECIFIED, 0};
 
 	const char *symbol_name = "ompd_access_gomp_thread_pool_threads";
@@ -79,8 +79,8 @@ ompd_get_thread_in_parallel(ompd_parallel_handle_t *parallel_handle,
 
 	// derefrencing
 	ret = callbacks->read_memory(context, NULL, &taddr,
-		target_sizes.sizeof_pointer, &(tmpAddr.address));
-	ret = callbacks->device_to_host(context, &(tmpAddr.address),
+		target_sizes.sizeof_pointer, &(tmp_addr.address));
+	ret = callbacks->device_to_host(context, &(tmp_addr.address),
 		target_sizes.sizeof_pointer, 1, &(taddr.address));
 
 	if (ret != ompd_rc_ok)
@@ -88,8 +88,8 @@ ompd_get_thread_in_parallel(ompd_parallel_handle_t *parallel_handle,
 
 	taddr.address += thread_num * target_sizes.sizeof_pointer;
 	ret = callbacks->read_memory(context, NULL, &taddr,
-		target_sizes.sizeof_pointer, &(tmpAddr.address));
-	ret = callbacks->device_to_host(context, &(tmpAddr.address),
+		target_sizes.sizeof_pointer, &(tmp_addr.address));
+	ret = callbacks->device_to_host(context, &(tmp_addr.address),
 		target_sizes.sizeof_pointer, 1, &(taddr.address));
 
 	if (ret != ompd_rc_ok)
@@ -110,7 +110,7 @@ ompd_get_thread_in_parallel(ompd_parallel_handle_t *parallel_handle,
 		OMPD thread handle.  */
 
 ompd_rc_t
-ompd_get_thread_handle(ompd_address_space_handle_t * handle,
+ompd_get_thread_handle(ompd_address_space_handle_t *handle,
 	ompd_thread_id_t kind, ompd_size_t sizeof_thread_id, const void *thread_id,
 		ompd_thread_handle_t **thread_handle)
 {
@@ -132,32 +132,31 @@ ompd_get_thread_handle(ompd_address_space_handle_t * handle,
 	if(ret != ompd_rc_ok)
 		return ret;
 
-	ompd_address_t tmpAddr,symbolAddr = {OMPD_SEGMENT_UNSPECIFIED, 0};
+	ompd_address_t tmp_addr, symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
 	ret = callbacks->symbol_addr_lookup(context, tcontext,"gomp_tls_data",
-		&symbolAddr, NULL);
+		&symbol_addr, NULL);
 	/* it could be that tls is not enabled,
 		so gomp_tls_data is not defined.  */
 	if(ret != ompd_rc_ok)
 		goto try_key;
-	ret = callbacks->read_memory(context, tcontext, &symbolAddr,
-		target_sizes.sizeof_long_long, &(tmpAddr.address));
-	ret = callbacks->device_to_host(context, &(tmpAddr.address),
-																	target_sizes.sizeof_long_long, 1,
-																	&(symbolAddr.address));
+	ret = callbacks->read_memory(context, tcontext, &symbol_addr,
+		target_sizes.sizeof_long_long, &(tmp_addr.address));
+	ret = callbacks->device_to_host(context, &(tmp_addr.address),
+		target_sizes.sizeof_long_long, 1, &(symbol_addr.address));
 	goto allocation;
 try_key:
 	ret = callbacks->symbol_addr_lookup(context, tcontext, "gomp_tls_key",
-		&symbolAddr, NULL);
-	ret = callbacks->read_memory(context, tcontext, &symbolAddr,
-		target_sizes.sizeof_long_long, &(tmpAddr.address));
-	ret = callbacks->device_to_host(context, &(tmpAddr.address),
-		target_sizes.sizeof_long_long, 1, &(symbolAddr.address));
+		&symbol_addr, NULL);
+	ret = callbacks->read_memory(context, tcontext, &symbol_addr,
+		target_sizes.sizeof_long_long, &(tmp_addr.address));
+	ret = callbacks->device_to_host(context, &(tmp_addr.address),
+		target_sizes.sizeof_long_long, 1, &(symbol_addr.address));
 	if(ret != ompd_rc_ok)
 		return ret;
 	//TODO:
-	//pthread_key_t *key = symbolAddr.address;
-	symbolAddr.address = (ompd_addr_t)pthread_getspecific (*((pthread_key_t *)
-												symbolAddr.address));
+	//pthread_key_t *key = symbol_addr.address;
+	symbol_addr.address = (ompd_addr_t)pthread_getspecific (*((pthread_key_t *)
+		symbol_addr.address));
 allocation:
 	ret = callbacks->alloc_memory(sizeof(ompd_thread_handle_t),
 		(void **)(thread_handle));
@@ -166,7 +165,7 @@ allocation:
 		return ret;
 
 	(*thread_handle)->ah = handle;
-	(*thread_handle)->th = &symbolAddr;
+	(*thread_handle)->th = &symbol_addr;
 	(*thread_handle)->thread_context = tcontext;
 	return ret;
 }
@@ -203,7 +202,12 @@ ompd_thread_handle_compare(ompd_thread_handle_t *thread_handle_1,
 	return ompd_rc_ok;
 }
 
-// The ompd_get_thread_id function maps OMPD thread handle to a native thread.
+/* The ompd_get_thread_id function maps
+	OMPD thread handle to a native thread.  */
+
+/* Hey, Sayed. Pleas FIX this gomp_thread->ts.team_id.
+	Please take care of the formatting we don't use camelCase style
+	and ident by two spaces only if the line exceeds 80 chars.  */
 ompd_rc_t
 ompd_get_thread_id(ompd_thread_handle_t *thread_handle, ompd_thread_id_t kind,
 	ompd_size_t sizeof_thread_id, void *thread_id)
@@ -224,14 +228,14 @@ ompd_get_thread_id(ompd_thread_handle_t *thread_handle, ompd_thread_id_t kind,
 	ompd_rc_t ret;
 
 	ompd_address_t taddr = *(thread_handle->th),
-								symbolAddr = {OMPD_SEGMENT_UNSPECIFIED,0};
+		symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
 	ompd_size_t temp_size,size;
 	ompd_size_t temp_offset, offset;
 
-	const char * symbolName = "ompd_sizeof_gomp_thread_handle";
-	ret = callbacks->symbol_addr_lookup(context, NULL, symbolName,
-																				&symbolAddr, NULL);
-	ret = callbacks->read_memory(context, NULL, &symbolAddr,
+	const char *symbol_name = "ompd_sizeof_gomp_thread_handle";
+	ret = callbacks->symbol_addr_lookup(context, NULL, symbol_name, &symbol_addr,
+		NULL);
+	ret = callbacks->read_memory(context, NULL, &symbol_addr,
 		target_sizes.sizeof_long_long, &(temp_size));
 	ret = callbacks->device_to_host(context, &temp_size,
 		target_sizes.sizeof_long_long, 1, &(size));
@@ -240,12 +244,12 @@ ompd_get_thread_id(ompd_thread_handle_t *thread_handle, ompd_thread_id_t kind,
 	if (sizeof_thread_id != size)
 		return ompd_rc_bad_input;
 
-	symbolName = "ompd_access_gomp_thread_handle";
-	ret = callbacks->symbol_addr_lookup(context, NULL, symbolName,
-																			&symbolAddr, NULL);
-	if(!symbolAddr.address)
+	symbol_name = "ompd_access_gomp_thread_handle";
+	ret = callbacks->symbol_addr_lookup(context, NULL, symbol_name, &symbol_addr,
+		NULL);
+	if(!symbol_addr.address)
 		return ompd_rc_unsupported;
-	ret = callbacks->read_memory(context, NULL, &symbolAddr,
+	ret = callbacks->read_memory(context, NULL, &symbol_addr,
 		target_sizes.sizeof_long_long, &(temp_offset));
 	ret = callbacks->device_to_host(context, &temp_offset,
 		target_sizes.sizeof_long_long, 1, &offset);

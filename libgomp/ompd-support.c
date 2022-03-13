@@ -39,7 +39,7 @@
 const char **ompd_dll_locations = NULL;
 __UINT64_TYPE__ ompd_state;
 
-void 
+void
 ompd_load()
 {
 	static int ompd_initialized = 0;
@@ -48,7 +48,7 @@ ompd_load()
 
 	/* Get the offset of the struct members.  */
 	#define ompd_init_access(t, m)                \
-  		ompd_access_##t##_##m = (__UINT64_TYPE__) & (((struct t *)0)->m);
+  		ompd_access_##t##_##m = (__UINT64_TYPE__) & (((struct t *)NULL)->m);
  		OMPD_FOREACH_ACCESS(ompd_init_access)
 	#undef ompd_init_access
 
@@ -67,7 +67,7 @@ ompd_load()
 
 
 	fprintf(stderr, "OMP OMPD active\n");
-	static const char *tmp_ompd_dll_locations[2] 
+	static const char *tmp_ompd_dll_locations[2]
 		= {"libgompd" SONAME_SUFFIX(1) , NULL};
 	ompd_state |= OMPD_ENABLED;
 	ompd_initialized = 1;

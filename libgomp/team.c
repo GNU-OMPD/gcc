@@ -30,6 +30,7 @@
 #include "pool.h"
 #include <stdlib.h>
 #include <string.h>
+#include "ompd-support.h"
 
 #ifdef LIBGOMP_USE_PTHREADS
 pthread_attr_t gomp_thread_attr;
@@ -69,6 +70,8 @@ struct gomp_thread_start_data
 static void *
 gomp_thread_start (void *xdata)
 {
+  if(ompd_state)
+    ompd_bp_thread_begin();
   struct gomp_thread_start_data *data = xdata;
   struct gomp_thread *thr;
   struct gomp_thread_pool *pool;
