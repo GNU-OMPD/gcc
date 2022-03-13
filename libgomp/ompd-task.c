@@ -27,21 +27,21 @@
 
 
 ompd_rc_t
-ompd_get_curr_task_handle( ompd_thread_handle_t * thread_handle,
+ompd_get_curr_task_handle( ompd_thread_handle_t *thread_handle,
    ompd_task_handle_t ** task_handle)
 {
    if(thread_handle == NULL )
       return ompd_rc_bad_input ;
 
-   ompd_address_space_context_t context = thread_handle->ah.context  ; 
-   ompd_thread_context_t tcontext = thread_handle->thread_context ;   
+   ompd_address_space_context_t *context = thread_handle->ah->context  ; 
+   ompd_thread_context_t *tcontext = thread_handle->thread_context ;   
    if(context == NULL )
       return ompd_rc_bad_input ;
    
    // gomp_thread_pool[t]->task 
    //  how to get the size 
    ompd_addr_t task_address ; 
-   omd_rc_t ret = ompd_rc_ok ; 
+   ompd_rc_t ret = ompd_rc_ok ; 
 
    GET_VALUE(context, tcontext, "task", task_address, task_address,
 		target_sizes.sizeof_long_long, 1, ret);
@@ -52,8 +52,6 @@ ompd_get_curr_task_handle( ompd_thread_handle_t * thread_handle,
    if(ret != ompd_rc_ok)
 		return ret;
 
-	if(handle == NULL)
-		return ompd_rc_error;
 
    (*task_handle)->ah = thread_handle->ah ;
    (*task_handle)->th = task_address ;
