@@ -1,4 +1,3 @@
-
 2022-02-04  Tobias Burnus  <tobias@codesourcery.com>
 
 	* testsuite/libgomp.fortran/allocate-1.f90: Remove spurious
