@@ -68,6 +68,7 @@ gompd_load ()
   ompd_dll_locations_valid ();
 }
 
+#ifndef __ELF__
 /* Dummy functions. they shoud not be optimized.  */
 
 void __attribute__ ((noinline))
@@ -123,3 +124,4 @@ ompd_bp_device_end ()
 {
   asm ("");
 }
+#endif /* __ELF__*/

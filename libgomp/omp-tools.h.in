@@ -18,10 +18,8 @@
    see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
    <http://www.gnu.org/licenses/>.  */
 
-
 /* This file contains data types and function declarations that
    that are defined in OMPD standard.  */
-
 
 #ifndef _OMP_TOOLS_H
 #define _OMP_TOOLS_H
@@ -32,7 +30,13 @@ extern "C" {
 
 extern const char **ompd_dll_locations;
 
-void ompd_dll_locations_valid (void);
+#ifdef __ELF__
+#define ompd_dll_locations_valid() \
+  __asm__ __volatile__ (".globl ompd_dll_locations_valid\n\t" \
+			"ompd_dll_locations_valid:")
+#else
+extern void ompd_dll_locations_valid (void);
+#endif /* __ELF__ */
 
 typedef __UINT64_TYPE__ ompd_size_t;
 typedef __UINT64_TYPE__ ompd_wait_id_t;
@@ -110,30 +114,29 @@ typedef ompd_rc_t (*ompd_callback_memory_free_fn_t) (void *);
 
 typedef ompd_rc_t (*ompd_callback_get_thread_context_for_thread_id_fn_t)
   (ompd_address_space_context_t *, ompd_thread_id_t,
-  ompd_size_t, const void *, ompd_thread_context_t **);
+   ompd_size_t, const void *, ompd_thread_context_t **);
 
 
-typedef ompd_rc_t (*ompd_callback_sizeof_fn_t)
-  (ompd_address_space_context_t *, ompd_device_type_sizes_t *);
+typedef ompd_rc_t (*ompd_callback_sizeof_fn_t) (ompd_address_space_context_t *,
+		   ompd_device_type_sizes_t *);
 
 
 typedef ompd_rc_t (*ompd_callback_symbol_addr_fn_t)
-  (ompd_address_space_context_t *, ompd_thread_context_t *,
-  const char *, ompd_address_t *, const char *);
+  (ompd_address_space_context_t *, ompd_thread_context_t *, const char *,
+   ompd_address_t *, const char *);
 
 typedef ompd_rc_t (*ompd_callback_memory_read_fn_t)
   (ompd_address_space_context_t *, ompd_thread_context_t *,
-  const ompd_address_t *, ompd_size_t nbytes, void *);
+   const ompd_address_t *, ompd_size_t nbytes, void *);
 
 
 typedef ompd_rc_t (*ompd_callback_memory_write_fn_t)
   (ompd_address_space_context_t *, ompd_thread_context_t *,
-  const ompd_address_t *, ompd_size_t, const void *);
+   const ompd_address_t *, ompd_size_t, const void *);
 
 typedef ompd_rc_t (*ompd_callback_device_host_fn_t)
   (ompd_address_space_context_t *, const void *,
-  ompd_size_t, ompd_size_t, void *);
-
+   ompd_size_t, ompd_size_t, void *);
 
 typedef ompd_rc_t (*ompd_callback_print_string_fn_t) (const char *, int);
 
@@ -153,7 +156,6 @@ typedef struct ompd_callbacks_t
     get_thread_context_for_thread_id;
 } ompd_callbacks_t;
 
-
 ompd_rc_t ompd_initialize (ompd_word_t, const ompd_callbacks_t *);
 
 ompd_rc_t ompd_get_api_version (ompd_word_t *);
@@ -162,111 +164,137 @@ ompd_rc_t ompd_get_version_string (const char **);
 ompd_rc_t ompd_finalize (void);
 
 ompd_rc_t ompd_process_initialize (ompd_address_space_context_t *,
-  ompd_address_space_handle_t **);
-
+				   ompd_address_space_handle_t **);
 
 ompd_rc_t ompd_device_initialize (ompd_address_space_handle_t *,
-  ompd_address_space_context_t *, ompd_device_t, ompd_size_t, void *,
-  ompd_address_space_handle_t **);
+				  ompd_address_space_context_t *, ompd_device_t,
+				  ompd_size_t, void *,
+				  ompd_address_space_handle_t **);
 
 ompd_rc_t ompd_rel_address_space_handle (ompd_address_space_handle_t *);
 
 ompd_rc_t ompd_get_omp_version (ompd_address_space_handle_t *, ompd_word_t *);
 
 ompd_rc_t ompd_get_omp_version_string (ompd_address_space_handle_t *,
-  const char **);
-
-
+				       const char **);
 
 ompd_rc_t ompd_get_thread_in_parallel (ompd_parallel_handle_t *, int,
-  ompd_thread_handle_t **);
+				       ompd_thread_handle_t **);
 
 ompd_rc_t ompd_get_thread_handle (ompd_address_space_handle_t *,
-  ompd_thread_id_t, ompd_size_t,const void *, ompd_thread_handle_t **);
+				  ompd_thread_id_t, ompd_size_t,const void *,
+				  ompd_thread_handle_t **);
 
 ompd_rc_t ompd_rel_thread_handle (ompd_thread_handle_t *);
 
 ompd_rc_t ompd_thread_handle_compare (ompd_thread_handle_t *,
-  ompd_thread_handle_t *,int *);
+				      ompd_thread_handle_t *,int *);
 
 ompd_rc_t ompd_get_thread_id (ompd_thread_handle_t *, ompd_thread_id_t,
-  ompd_size_t, void *);
+			      ompd_size_t, void *);
 
 ompd_rc_t ompd_get_curr_parallel_handle (ompd_thread_handle_t *,
-  ompd_parallel_handle_t **);
+					 ompd_parallel_handle_t **);
 
 ompd_rc_t ompd_get_enclosing_parallel_handle (ompd_parallel_handle_t *,
-  ompd_parallel_handle_t **);
+					      ompd_parallel_handle_t **);
 
 ompd_rc_t ompd_get_task_parallel_handle (ompd_task_handle_t *,
-  ompd_parallel_handle_t **);
+					 ompd_parallel_handle_t **);
 
 ompd_rc_t ompd_rel_parallel_handle (ompd_parallel_handle_t *);
 
 ompd_rc_t ompd_parallel_handle_compare (ompd_parallel_handle_t *,
-  ompd_parallel_handle_t *, int *);
+					ompd_parallel_handle_t *, int *);
 
 ompd_rc_t ompd_get_curr_task_handle (ompd_thread_handle_t *,
-  ompd_task_handle_t **);
+				     ompd_task_handle_t **);
 
 ompd_rc_t ompd_get_generating_task_handle (ompd_task_handle_t *,
-  ompd_task_handle_t **);
+					   ompd_task_handle_t **);
 
 ompd_rc_t ompd_get_scheduling_task_handle (ompd_task_handle_t *,
-  ompd_task_handle_t **);
+					   ompd_task_handle_t **);
 
 ompd_rc_t ompd_get_task_in_parallel (ompd_parallel_handle_t *, int,
-  ompd_task_handle_t **);
+				     ompd_task_handle_t **);
 
 ompd_rc_t ompd_rel_task_handle (ompd_task_handle_t *);
 
 ompd_rc_t ompd_task_handle_compare (ompd_task_handle_t *, ompd_task_handle_t *,
-  int *);
+				    int *);
 
 ompd_rc_t ompd_get_task_function (ompd_task_handle_t *, ompd_address_t *);
 
 ompd_rc_t ompd_get_task_frame (ompd_task_handle_t *, ompd_frame_info_t *,
-  ompd_frame_info_t *);
+			       ompd_frame_info_t *);
 
 ompd_rc_t ompd_enumerate_states (ompd_address_space_handle_t *, ompd_word_t,
-  ompd_word_t *, const char **, ompd_word_t *);
+				 ompd_word_t *, const char **, ompd_word_t *);
 
 ompd_rc_t ompd_get_state (ompd_thread_handle_t *, ompd_word_t *,
-  ompd_wait_id_t *);
+			  ompd_wait_id_t *);
 
 ompd_rc_t ompd_get_display_control_vars (ompd_address_space_handle_t *,
-  const char * const **);
+					 const char * const **);
 
 ompd_rc_t ompd_rel_display_control_vars (const char * const **);
 
 ompd_rc_t ompd_enumerate_icvs (ompd_address_space_handle_t *, ompd_icv_id_t,
-  ompd_icv_id_t *, const char **, ompd_scope_t *, int *);
+			       ompd_icv_id_t *, const char **, ompd_scope_t *,
+			       int *);
 
 ompd_rc_t ompd_get_icv_from_scope (void *, ompd_scope_t, ompd_icv_id_t,
-  ompd_word_t *);
+				   ompd_word_t *);
 
 ompd_rc_t ompd_get_icv_string_from_scope (void *, ompd_scope_t, ompd_icv_id_t,
-  const char **);
+					  const char **);
 
 ompd_rc_t ompd_get_tool_data (void *, ompd_scope_t, ompd_word_t *,
-  ompd_address_t *);
+			      ompd_address_t *);
 
-void ompd_bp_parallel_begin (void);
-void ompd_bp_parallel_end (void);
+#ifdef __ELF__
+#define ompd_bp_parallel_begin() \
+  __asm__ __volatile__ (".globl ompd_bp_parallel_begin\n\t" \
+			"ompd_bp_parallel_begin:")
+#define ompd_bp_parallel_end() \
+  __asm__ __volatile__ (".globl ompd_bp_parallel_end\n\t" \
+			"ompd_bp_parallel_end:")
+#define ompd_bp_task_begin() \
+  __asm__ __volatile__ (".globl ompd_bp_task_begin\n\t" \
+			"ompd_bp_task_begin:")
+#define ompd_bp_task_end() \
+  __asm__ __volatile__ (".globl ompd_bp_task_end\n\t" \
+			"ompd_bp_task_end:")
+#define ompd_bp_thread_begin() \
+  __asm__ __volatile__ (".globl ompd_bp_thread_begin\n\t" \
+			"ompd_bp_thread_begin:")
+#define ompd_bp_thread_end() \
+  __asm__ __volatile__ (".globl ompd_bp_thread_end\n\t" \
+			"ompd_bp_thread_end:")
+#define ompd_bp_device_begin() \
+  __asm__ __volatile__ (".globl ompd_bp_device_begin\n\t" \
+			"ompd_bp_device_end:")
+#define ompd_bp_device_end() \
+  __asm__ __volatile__ (".globl ompd_bp_device_end\n\t" \
+			"ompd_bp_device_end:")
+#else
 
-void ompd_bp_task_begin (void);
-void ompd_bp_task_end (void);
+extern void ompd_bp_parallel_begin (void);
+extern void ompd_bp_parallel_end (void);
 
-void ompd_bp_thread_begin (void);
-void ompd_bp_thread_end (void);
+extern void ompd_bp_task_begin (void);
+extern void ompd_bp_task_end (void);
 
-void ompd_bp_device_begin (void);
-void ompd_bp_device_end (void);
+extern void ompd_bp_thread_begin (void);
+extern void ompd_bp_thread_end (void);
 
+extern void ompd_bp_device_begin (void);
+extern void ompd_bp_device_end (void);
+#endif /* __ELF__ */
 
 #define ompd_segment_none  ((ompd_seg_t) 0)
 #define ompd_icv_undefined ((ompd_icv_id_t) 0)
-
 
 #ifdef __cplusplus
 }; // extern "C"
