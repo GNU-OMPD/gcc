@@ -70,8 +70,6 @@ struct gomp_thread_start_data
 static void *
 gomp_thread_start (void *xdata)
 {
-  if(ompd_state)
-    ompd_bp_thread_begin();
   struct gomp_thread_start_data *data = xdata;
   struct gomp_thread *thr;
   struct gomp_thread_pool *pool;
@@ -324,6 +322,7 @@ gomp_team_start (void (*fn) (void *), void *data, unsigned nthreads,
 		 unsigned flags, struct gomp_team *team,
 		 struct gomp_taskgroup *taskgroup)
 {
+  ompd_bp_parallel_begin ();
   struct gomp_thread_start_data *start_data = NULL;
   struct gomp_thread *thr, *nthr;
   struct gomp_task *task;
@@ -1014,6 +1013,7 @@ gomp_team_end (void)
       pool->last_team = team;
       gomp_release_thread_pool (pool);
     }
+  ompd_bp_parallel_end ();
 }
 
 #ifdef LIBGOMP_USE_PTHREADS

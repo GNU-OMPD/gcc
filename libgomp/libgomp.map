@@ -13,7 +13,7 @@ OMP_1.0 {
 #ifdef HAVE_SYMVER_SYMBOL_RENAMING_RUNTIME_SUPPORT
         # If the assembler used lacks the .symver directive or the linker
 	# doesn't support GNU symbol versioning, we have the same symbol in
-	# two versions, which Sun ld chokes on. 
+	# two versions, which Sun ld chokes on.
 	omp_init_lock;
 	omp_init_nest_lock;
 	omp_destroy_lock;
@@ -228,13 +228,11 @@ OMP_5.1 {
 
 OMP_5.0.3 {
   global:
-  	ompd_dll_locations;
-  	ompd_dll_locations_valid;
-  	ompd_bp_parallel_begin;
-  	ompd_bp_parallel_end;
-  local:
-  	*;
-}OMP_5.0.2;
+	ompd_dll_locations;
+	ompd_dll_locations_valid;
+	ompd_bp_parallel_begin;
+	ompd_bp_parallel_end;
+} OMP_5.0.2;
 
 GOMP_1.0 {
   global:

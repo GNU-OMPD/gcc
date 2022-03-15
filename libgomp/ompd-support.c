@@ -1,4 +1,4 @@
-/* Copyright (C) 2021 Free Software Foundation, Inc.
+/* Copyright (C) 2022 Free Software Foundation, Inc.
    Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
    This file is part of the GNU Offloading and Multi Processing Library
    (libgomp).
@@ -20,124 +20,106 @@
 
 #include "ompd-support.h"
 
+#define gompd_declare_access(t, m) __UINT64_TYPE__ gompd_access_##t##_##m;
+  GOMPD_FOREACH_ACCESS (gompd_declare_access)
+#undef gompd_declare_access
 
-#define ompd_declare_access(t, m) __UINT64_TYPE__ ompd_access_##t##_##m;
-	OMPD_FOREACH_ACCESS(ompd_declare_access)
-#undef ompd_declare_access
+#define gompd_declare_sizeof_members(t, m) \
+  __UINT64_TYPE__ gompd_sizeof_##t##_##m;
+  GOMPD_FOREACH_ACCESS (gompd_declare_sizeof_members)
+#undef gompd_declare_sizeof_members
 
-
-#define ompd_declare_sizeof_members(t, m) __UINT64_TYPE__ ompd_sizeof_##t##_##m;
-	OMPD_FOREACH_ACCESS(ompd_declare_sizeof_members)
-#undef ompd_declare_sizeof_members
-
-
-#define ompd_declare_sizes(t) __UINT64_TYPE__ ompd_sizeof_##t;
-	OMPD_SIZES(ompd_declare_sizes)
-#undef ompd_declare_sizes
-
+#define gompd_declare_sizes(t) __UINT64_TYPE__ gompd_sizeof_##t;
+  GOMPD_SIZES (gompd_declare_sizes)
+#undef gompd_declare_sizes
 
 const char **ompd_dll_locations = NULL;
-__UINT64_TYPE__ ompd_state;
+__UINT64_TYPE__ gompd_state;
 
 void
-ompd_load()
+gompd_load ()
 {
-	static int ompd_initialized = 0;
-	if(ompd_initialized)
-		return;
+  const char *ompd_env_var = getenv ("OMP_DEBUG");
+  if (ompd_env_var == NULL || strcmp (ompd_env_var, "enabled"))
+    return;
 
-	/* Get the offset of the struct members.  */
-	#define ompd_init_access(t, m)                \
-  		ompd_access_##t##_##m = (__UINT64_TYPE__) & (((struct t *)NULL)->m);
- 		OMPD_FOREACH_ACCESS(ompd_init_access)
-	#undef ompd_init_access
+  /* Get the offset of the struct members.  */
+  #define gompd_init_access(t, m)  \
+    gompd_access_##t##_##m = (__UINT64_TYPE__) & (((struct t *) NULL)->m);
+    GOMPD_FOREACH_ACCESS (gompd_init_access);
+  #undef gompd_init_access
 
+  /* Get sizeof members.  */
 
-	/* Get sizeof members.  */
+  #define gompd_init_sizeof_members(t, m) \
+    gompd_sizeof_##t##_##m = sizeof (((struct t *) NULL)->m);
+    GOMPD_FOREACH_ACCESS (gompd_init_sizeof_members);
+  #undef gompd_declare_sizeof_members
 
-	#define ompd_init_sizeof_members(t, m) \
-		ompd_sizeof_##t##_##m = sizeof(((struct t *)NULL)->m);
-		OMPD_FOREACH_ACCESS(ompd_init_sizeof_members)
-	#undef ompd_declare_sizeof_members
+  #define gompd_init_sizes(t) gompd_sizeof_##t = sizeof (struct t);
+    GOMPD_SIZES (gompd_init_sizes)
+  #undef gompd_init_sizes
 
-
-	#define ompd_init_sizes(t) ompd_sizeof_##t = sizeof(struct t);
-		OMPD_SIZES(ompd_init_sizes)
-	#undef ompd_init_sizes
-
-
-	fprintf(stderr, "OMP OMPD active\n");
-	static const char *tmp_ompd_dll_locations[2]
-		= {"libgompd" SONAME_SUFFIX(1) , NULL};
-	ompd_state |= OMPD_ENABLED;
-	ompd_initialized = 1;
-	ompd_dll_locations = (const char **)malloc(2 * sizeof(const char *));
-	ompd_dll_locations[0] = tmp_ompd_dll_locations[0];
-	ompd_dll_locations[1] = tmp_ompd_dll_locations[1];
-	ompd_dll_locations_valid();
+  gomp_debug (2, "OMP OMPD active\n");
+  static const char *ompd_dll_locations_array[2]
+    = {"libgompd" SONAME_SUFFIX (1) , NULL};
+  gompd_state |= OMPD_ENABLED;
+  ompd_dll_locations = &ompd_dll_locations_array[0];
+  ompd_dll_locations_valid ();
 }
 
-
-/*Dummy functions. they shoud not be optimized.  */
-
-void __attribute__ ((noinline))
-ompd_dll_locations_valid()
-{
-	asm("");
-}
-
+/* Dummy functions. they shoud not be optimized.  */
 
 void __attribute__ ((noinline))
-ompd_bp_parallel_begin()
+ompd_dll_locations_valid ()
 {
-	asm("");
+  asm ("");
 }
 
 void __attribute__ ((noinline))
-ompd_bp_parallel_end()
+ompd_bp_parallel_begin ()
 {
-	asm("");
-}
-
-
-
-void __attribute__ ((noinline))
-ompd_bp_task_begin()
-{
-	asm("");
-}
-
-
-void __attribute__ ((noinline))
-ompd_bp_task_end()
-{
-	asm("");
-}
-
-
-
-void __attribute__ ((noinline))
-ompd_bp_thread_begin()
-{
-	asm("");
+  asm ("");
 }
 
 void __attribute__ ((noinline))
-ompd_bp_thread_end()
+ompd_bp_parallel_end ()
 {
-	asm("");
-}
-
-
-
-void __attribute__ ((noinline))
-ompd_bp_device_begin()
-{
-	asm("");
+  asm ("");
 }
 
 void __attribute__ ((noinline))
-ompd_bp_device_end()
+ompd_bp_task_begin ()
 {
-	asm("");
+  asm ("");
+}
+
+void __attribute__ ((noinline))
+ompd_bp_task_end ()
+{
+  asm ("");
+}
+
+void __attribute__ ((noinline))
+ompd_bp_thread_begin ()
+{
+  asm ("");
+}
+
+void __attribute__ ((noinline))
+ompd_bp_thread_end ()
+{
+  asm ("");
+}
+
+void __attribute__ ((noinline))
+ompd_bp_device_begin ()
+{
+  asm ("");
+}
+
+void __attribute__ ((noinline))
+ompd_bp_device_end ()
+{
+  asm ("");
 }

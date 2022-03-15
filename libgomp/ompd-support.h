@@ -1,4 +1,4 @@
-/* Copyright (C) 2021 Free Software Foundation, Inc.
+/* Copyright (C) 2022 Free Software Foundation, Inc.
    Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
    This file is part of the GNU Offloading and Multi Processing Library
    (libgomp).
@@ -18,9 +18,7 @@
    see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
    <http://www.gnu.org/licenses/>.  */
 
-
-
-/*This file contains the runtime support for OMPD.  */
+/*This file contains the runtime support for gompd.  */
 
 #ifndef _OMPD_SUPPORT_H
 #define _OMPD_SUPPORT_H
@@ -33,29 +31,27 @@
 #include <stdio.h>
 #include <stddef.h>
 
-void ompd_load();
-extern __UINT64_TYPE__ ompd_state;
+void gompd_load ();
+extern __UINT64_TYPE__ gompd_state;
 
 #define OMPD_ENABLED 0x1
 
-#define OMPD_FOREACH_ACCESS(ompd_access) \
-   ompd_access(gomp_task_icv, nthreads_var) \
-   ompd_access(gomp_task_icv, run_sched_var) \
-   ompd_access(gomp_task_icv, run_sched_chunk_size) \
-   ompd_access(gomp_task_icv, default_device_var) \
-   ompd_access(gomp_task_icv, thread_limit_var) \
-   ompd_access(gomp_task_icv, dyn_var) \
-   ompd_access(gomp_task_icv, bind_var) \
-   ompd_access(gomp_thread, task) \
-   ompd_access(gomp_thread_pool, threads) \
-   ompd_access(gomp_thread, ts) \
-   ompd_access(gomp_team_state, team_id) \
+#define GOMPD_FOREACH_ACCESS(gompd_access) \
+   gompd_access (gomp_task_icv, nthreads_var) \
+   gompd_access (gomp_task_icv, run_sched_var) \
+   gompd_access (gomp_task_icv, run_sched_chunk_size) \
+   gompd_access (gomp_task_icv, default_device_var) \
+   gompd_access (gomp_task_icv, thread_limit_var) \
+   gompd_access (gomp_task_icv, dyn_var) \
+   gompd_access (gomp_task_icv, bind_var) \
+   gompd_access (gomp_thread, task) \
+   gompd_access (gomp_thread_pool, threads) \
+   gompd_access (gomp_thread, ts) \
+   gompd_access (gomp_team_state, team_id) \
 
-
-#define OMPD_SIZES(ompd_size) \
-   ompd_size(gomp_thread) \
-   ompd_size(gomp_task_icv) \
-   ompd_size(gomp_task)
-
+#define GOMPD_SIZES(gompd_size) \
+   gompd_size (gomp_thread) \
+   gompd_size (gomp_task_icv) \
+   gompd_size (gomp_task)
 
 #endif /* _OMPD_SUPPORT_H */

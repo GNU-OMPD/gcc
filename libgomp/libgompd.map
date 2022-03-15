@@ -18,6 +18,4 @@ OMPD_5.1 {
     ompd_get_device_from_thread;
     ompd_bp_thread_begin;
     ompd_bp_thread_end;
-  local:
-  	*;
 };
