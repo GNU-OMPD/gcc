@@ -185,4 +185,4 @@ ompd_rc_t ompd_get_managed_threads (ompd_address_space_handle_t *,
 } // extern C
 #endif
 
-#endif /* OMPD_HELPER_H.  */
+#endif /* _OMPD_HELPER_H */
