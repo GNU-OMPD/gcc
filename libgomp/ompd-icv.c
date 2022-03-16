@@ -132,18 +132,18 @@ ompd_get_icv_from_scope (void *handle, ompd_scope_t scope, ompd_icv_id_t icv_id,
 					 icv_value);
 	   case ompd_icv_num_proc_var:
 	     return
-		ompd_get_available_cpus ((ompd_address_space_handle_t *) handle,
-					 icv_value);
+	       ompd_get_available_cpus ((ompd_address_space_handle_t *) handle,
+					icv_value);
 	   case ompd_icv_throttled_spin_count_var:
 	     return
-		ompd_get_throttled_spin_count ((ompd_address_space_handle_t *)
-					       handle, icv_value);
+	       ompd_get_throttled_spin_count ((ompd_address_space_handle_t *)
+					      handle, icv_value);
 	   case ompd_icv_managed_threads_var:
 	     return
-		ompd_get_managed_threads ((ompd_address_space_handle_t *)
-					  handle, icv_value);
+	       ompd_get_managed_threads ((ompd_address_space_handle_t *)
+					 handle, icv_value);
 	  default:
-	     return ompd_rc_unsupported;
+	    return ompd_rc_unsupported;
 	 }
     }
     return ompd_rc_error;
