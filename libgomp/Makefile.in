@@ -190,7 +190,7 @@ libgomp_plugin_gcn_la_OBJECTS = $(am_libgomp_plugin_gcn_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
-am__v_lt_1 =
+am__v_lt_1 = 
 libgomp_plugin_gcn_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(libgomp_plugin_gcn_la_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
@@ -223,7 +223,8 @@ am_libgomp_la_OBJECTS = alloc.lo atomic.lo barrier.lo critical.lo \
 	oacc-target.lo ompd-support.lo $(am__objects_1)
 libgomp_la_OBJECTS = $(am_libgomp_la_OBJECTS)
 libgompd_la_LIBADD =
-am_libgompd_la_OBJECTS = ompd-init.lo ompd-helper.lo ompd-icv.lo ompd-thread.lo
+am_libgompd_la_OBJECTS = ompd-init.lo ompd-helper.lo ompd-icv.lo \
+	ompd-thread.lo
 libgompd_la_OBJECTS = $(am_libgompd_la_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -232,11 +233,11 @@ am__v_P_1 = :
 AM_V_GEN = $(am__v_GEN_@AM_V@)
 am__v_GEN_ = $(am__v_GEN_@AM_DEFAULT_V@)
 am__v_GEN_0 = @echo "  GEN     " $@;
-am__v_GEN_1 =
+am__v_GEN_1 = 
 AM_V_at = $(am__v_at_@AM_V@)
 am__v_at_ = $(am__v_at_@AM_DEFAULT_V@)
 am__v_at_0 = @
-am__v_at_1 =
+am__v_at_1 = 
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/../depcomp
 am__maybe_remake_depfiles = depfiles
@@ -258,17 +259,16 @@ am__depfiles_remade = ./$(DEPDIR)/affinity-fmt.Plo \
 	./$(DEPDIR)/oacc-mem.Plo ./$(DEPDIR)/oacc-parallel.Plo \
 	./$(DEPDIR)/oacc-plugin.Plo ./$(DEPDIR)/oacc-profiling.Plo \
 	./$(DEPDIR)/oacc-target.Plo ./$(DEPDIR)/ompd-helper.Plo \
-	./$(DEPDIR)/ompd-init.Plo ./$(DEPDIR)/ompd-support.Plo \
-	./$(DEPDIR)/ompd_thread.Plo ./$(DEPDIR)/ordered.Plo \
-	./$(DEPDIR)/ompd-icv.Plo \
-	./$(DEPDIR)/parallel.Plo ./$(DEPDIR)/priority_queue.Plo \
-	./$(DEPDIR)/proc.Plo ./$(DEPDIR)/ptrlock.Plo \
-	./$(DEPDIR)/scope.Plo ./$(DEPDIR)/sections.Plo \
-	./$(DEPDIR)/sem.Plo ./$(DEPDIR)/single.Plo \
-	./$(DEPDIR)/splay-tree.Plo ./$(DEPDIR)/target.Plo \
-	./$(DEPDIR)/task.Plo ./$(DEPDIR)/team.Plo \
-	./$(DEPDIR)/teams.Plo ./$(DEPDIR)/time.Plo \
-	./$(DEPDIR)/work.Plo
+	./$(DEPDIR)/ompd-icv.Plo ./$(DEPDIR)/ompd-init.Plo \
+	./$(DEPDIR)/ompd-support.Plo ./$(DEPDIR)/ompd-thread.Plo \
+	./$(DEPDIR)/ordered.Plo ./$(DEPDIR)/parallel.Plo \
+	./$(DEPDIR)/priority_queue.Plo ./$(DEPDIR)/proc.Plo \
+	./$(DEPDIR)/ptrlock.Plo ./$(DEPDIR)/scope.Plo \
+	./$(DEPDIR)/sections.Plo ./$(DEPDIR)/sem.Plo \
+	./$(DEPDIR)/single.Plo ./$(DEPDIR)/splay-tree.Plo \
+	./$(DEPDIR)/target.Plo ./$(DEPDIR)/task.Plo \
+	./$(DEPDIR)/team.Plo ./$(DEPDIR)/teams.Plo \
+	./$(DEPDIR)/time.Plo ./$(DEPDIR)/work.Plo
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -279,19 +279,19 @@ LTCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 AM_V_CC = $(am__v_CC_@AM_V@)
 am__v_CC_ = $(am__v_CC_@AM_DEFAULT_V@)
 am__v_CC_0 = @echo "  CC      " $@;
-am__v_CC_1 =
+am__v_CC_1 = 
 CCLD = $(CC)
 AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
-am__v_CCLD_1 =
+am__v_CCLD_1 = 
 FCCOMPILE = $(FC) $(AM_FCFLAGS) $(FCFLAGS)
 LTFCCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=compile $(FC) $(AM_FCFLAGS) $(FCFLAGS)
 AM_V_FC = $(am__v_FC_@AM_V@)
 am__v_FC_ = $(am__v_FC_@AM_DEFAULT_V@)
 am__v_FC_0 = @echo "  FC      " $@;
-am__v_FC_1 =
+am__v_FC_1 = 
 FCLD = $(FC)
 FCLINK = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(FCLD) $(AM_FCFLAGS) $(FCFLAGS) \
@@ -299,38 +299,38 @@ FCLINK = $(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
 AM_V_FCLD = $(am__v_FCLD_@AM_V@)
 am__v_FCLD_ = $(am__v_FCLD_@AM_DEFAULT_V@)
 am__v_FCLD_0 = @echo "  FCLD    " $@;
-am__v_FCLD_1 =
+am__v_FCLD_1 = 
 SOURCES = $(libgomp_plugin_gcn_la_SOURCES) \
 	$(libgomp_plugin_nvptx_la_SOURCES) $(libgomp_la_SOURCES) \
 	$(libgompd_la_SOURCES)
 AM_V_DVIPS = $(am__v_DVIPS_@AM_V@)
 am__v_DVIPS_ = $(am__v_DVIPS_@AM_DEFAULT_V@)
 am__v_DVIPS_0 = @echo "  DVIPS   " $@;
-am__v_DVIPS_1 =
+am__v_DVIPS_1 = 
 AM_V_MAKEINFO = $(am__v_MAKEINFO_@AM_V@)
 am__v_MAKEINFO_ = $(am__v_MAKEINFO_@AM_DEFAULT_V@)
 am__v_MAKEINFO_0 = @echo "  MAKEINFO" $@;
-am__v_MAKEINFO_1 =
+am__v_MAKEINFO_1 = 
 AM_V_INFOHTML = $(am__v_INFOHTML_@AM_V@)
 am__v_INFOHTML_ = $(am__v_INFOHTML_@AM_DEFAULT_V@)
 am__v_INFOHTML_0 = @echo "  INFOHTML" $@;
-am__v_INFOHTML_1 =
+am__v_INFOHTML_1 = 
 AM_V_TEXI2DVI = $(am__v_TEXI2DVI_@AM_V@)
 am__v_TEXI2DVI_ = $(am__v_TEXI2DVI_@AM_DEFAULT_V@)
 am__v_TEXI2DVI_0 = @echo "  TEXI2DVI" $@;
-am__v_TEXI2DVI_1 =
+am__v_TEXI2DVI_1 = 
 AM_V_TEXI2PDF = $(am__v_TEXI2PDF_@AM_V@)
 am__v_TEXI2PDF_ = $(am__v_TEXI2PDF_@AM_DEFAULT_V@)
 am__v_TEXI2PDF_0 = @echo "  TEXI2PDF" $@;
-am__v_TEXI2PDF_1 =
+am__v_TEXI2PDF_1 = 
 AM_V_texinfo = $(am__v_texinfo_@AM_V@)
 am__v_texinfo_ = $(am__v_texinfo_@AM_DEFAULT_V@)
 am__v_texinfo_0 = -q
-am__v_texinfo_1 =
+am__v_texinfo_1 = 
 AM_V_texidevnull = $(am__v_texidevnull_@AM_V@)
 am__v_texidevnull_ = $(am__v_texidevnull_@AM_DEFAULT_V@)
 am__v_texidevnull_0 = > /dev/null
-am__v_texidevnull_1 =
+am__v_texidevnull_1 = 
 INFO_DEPS = libgomp.info
 am__TEXINFO_TEX_DIR = $(srcdir)/../gcc/doc/include
 DVIS = libgomp.dvi
@@ -574,16 +574,16 @@ nodist_toolexeclib_HEADERS = libgomp.spec
 # -Wc is only a libtool option.
 @LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@comma = ,
 @LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@PREPROCESS = $(subst -Wc$(comma), , $(COMPILE)) -E
-@LIBGOMP_BUILD_VERSIONED_SHLIB_FALSE@libgomp_version_script =
+@LIBGOMP_BUILD_VERSIONED_SHLIB_FALSE@libgomp_version_script = 
 @LIBGOMP_BUILD_VERSIONED_SHLIB_GNU_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@libgomp_version_script = -Wl,--version-script,libgomp.ver
 @LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@libgomp_version_script = -Wl,-M,libgomp.ver-sun
-@LIBGOMP_BUILD_VERSIONED_SHLIB_FALSE@libgompd_version_script =
+@LIBGOMP_BUILD_VERSIONED_SHLIB_FALSE@libgompd_version_script = 
 @LIBGOMP_BUILD_VERSIONED_SHLIB_GNU_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@libgompd_version_script = -Wl,--version-script,libgompd.ver
 @LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@libgompd_version_script = -Wl,-M,libgompd.ver-sun
-@LIBGOMP_BUILD_VERSIONED_SHLIB_FALSE@libgomp_version_dep =
+@LIBGOMP_BUILD_VERSIONED_SHLIB_FALSE@libgomp_version_dep = 
 @LIBGOMP_BUILD_VERSIONED_SHLIB_GNU_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@libgomp_version_dep = libgomp.ver
 @LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@libgomp_version_dep = libgomp.ver-sun
-@LIBGOMP_BUILD_VERSIONED_SHLIB_FALSE@libgompd_version_dep =
+@LIBGOMP_BUILD_VERSIONED_SHLIB_FALSE@libgompd_version_dep = 
 @LIBGOMP_BUILD_VERSIONED_SHLIB_GNU_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@libgompd_version_dep = libgompd.ver
 @LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@libgompd_version_dep = libgompd.ver-sun
 libgomp_version_info = -version-info $(libtool_VERSION)
@@ -650,20 +650,20 @@ TEXINFO_TEX = ../gcc/doc/include/texinfo.tex
 # Defines info, dvi, pdf and html targets
 MAKEINFOFLAGS = -I $(srcdir)/../gcc/doc/include
 info_TEXINFOS = libgomp.texi
-@GENINSRC_FALSE@STAMP_GENINSRC =
+@GENINSRC_FALSE@STAMP_GENINSRC = 
 
 # AM_CONDITIONAL on configure option --generated-files-in-srcdir
 @GENINSRC_TRUE@STAMP_GENINSRC = stamp-geninsrc
-@BUILD_INFO_FALSE@STAMP_BUILD_INFO =
+@BUILD_INFO_FALSE@STAMP_BUILD_INFO = 
 
 # AM_CONDITIONAL on configure check ACX_CHECK_PROG_VER([MAKEINFO])
 @BUILD_INFO_TRUE@STAMP_BUILD_INFO = stamp-build-info
 CLEANFILES = $(STAMP_GENINSRC) $(STAMP_BUILD_INFO)
 MAINTAINERCLEANFILES = $(srcdir)/libgomp.info
-MULTISRCTOP =
-MULTIBUILDTOP =
-MULTIDIRS =
-MULTISUBDIR =
+MULTISRCTOP = 
+MULTIBUILDTOP = 
+MULTIDIRS = 
+MULTISUBDIR = 
 MULTIDO = true
 MULTICLEAN = true
 all: config.h
@@ -713,7 +713,7 @@ config.h: stamp-h1
 stamp-h1: $(srcdir)/config.h.in $(top_builddir)/config.status
 	@rm -f stamp-h1
 	cd $(top_builddir) && $(SHELL) ./config.status config.h
-$(srcdir)/config.h.in: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
+$(srcdir)/config.h.in: @MAINTAINER_MODE_TRUE@ $(am__configure_deps) 
 	($(am__cd) $(top_srcdir) && $(AUTOHEADER))
 	rm -f stamp-h1
 	touch $@
@@ -770,16 +770,16 @@ clean-toolexeclibLTLIBRARIES:
 	  rm -f $${locs}; \
 	}
 
-libgomp-plugin-gcn.la: $(libgomp_plugin_gcn_la_OBJECTS) $(libgomp_plugin_gcn_la_DEPENDENCIES) $(EXTRA_libgomp_plugin_gcn_la_DEPENDENCIES)
+libgomp-plugin-gcn.la: $(libgomp_plugin_gcn_la_OBJECTS) $(libgomp_plugin_gcn_la_DEPENDENCIES) $(EXTRA_libgomp_plugin_gcn_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libgomp_plugin_gcn_la_LINK) $(am_libgomp_plugin_gcn_la_rpath) $(libgomp_plugin_gcn_la_OBJECTS) $(libgomp_plugin_gcn_la_LIBADD) $(LIBS)
 
-libgomp-plugin-nvptx.la: $(libgomp_plugin_nvptx_la_OBJECTS) $(libgomp_plugin_nvptx_la_DEPENDENCIES) $(EXTRA_libgomp_plugin_nvptx_la_DEPENDENCIES)
+libgomp-plugin-nvptx.la: $(libgomp_plugin_nvptx_la_OBJECTS) $(libgomp_plugin_nvptx_la_DEPENDENCIES) $(EXTRA_libgomp_plugin_nvptx_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libgomp_plugin_nvptx_la_LINK) $(am_libgomp_plugin_nvptx_la_rpath) $(libgomp_plugin_nvptx_la_OBJECTS) $(libgomp_plugin_nvptx_la_LIBADD) $(LIBS)
 
-libgomp.la: $(libgomp_la_OBJECTS) $(libgomp_la_DEPENDENCIES) $(EXTRA_libgomp_la_DEPENDENCIES)
+libgomp.la: $(libgomp_la_OBJECTS) $(libgomp_la_DEPENDENCIES) $(EXTRA_libgomp_la_DEPENDENCIES) 
 	$(AM_V_GEN)$(libgomp_la_LINK) -rpath $(toolexeclibdir) $(libgomp_la_OBJECTS) $(libgomp_la_LIBADD) $(LIBS)
 
-libgompd.la: $(libgompd_la_OBJECTS) $(libgompd_la_DEPENDENCIES) $(EXTRA_libgompd_la_DEPENDENCIES)
+libgompd.la: $(libgompd_la_OBJECTS) $(libgompd_la_DEPENDENCIES) $(EXTRA_libgompd_la_DEPENDENCIES) 
 	$(AM_V_GEN)$(libgompd_la_LINK) -rpath $(toolexeclibdir) $(libgompd_la_OBJECTS) $(libgompd_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
@@ -823,7 +823,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ompd-icv.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ompd-init.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ompd-support.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ompd_thread.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ompd-thread.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ordered.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/parallel.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/priority_queue.Plo@am__quote@ # am--include-marker
@@ -900,19 +900,19 @@ clean-libtool:
 distclean-libtool:
 	-rm -f libtool config.lt
 
-libgomp.dvi: libgomp.texi
+libgomp.dvi: libgomp.texi  
 	$(AM_V_TEXI2DVI)TEXINPUTS="$(am__TEXINFO_TEX_DIR)$(PATH_SEPARATOR)$$TEXINPUTS" \
 	MAKEINFO='$(MAKEINFO) $(AM_MAKEINFOFLAGS) $(MAKEINFOFLAGS) -I $(srcdir)' \
 	$(TEXI2DVI) $(AM_V_texinfo) --build-dir=$(@:.dvi=.t2d) -o $@ $(AM_V_texidevnull) \
 	`test -f 'libgomp.texi' || echo '$(srcdir)/'`libgomp.texi
 
-libgomp.pdf: libgomp.texi
+libgomp.pdf: libgomp.texi  
 	$(AM_V_TEXI2PDF)TEXINPUTS="$(am__TEXINFO_TEX_DIR)$(PATH_SEPARATOR)$$TEXINPUTS" \
 	MAKEINFO='$(MAKEINFO) $(AM_MAKEINFOFLAGS) $(MAKEINFOFLAGS) -I $(srcdir)' \
 	$(TEXI2PDF) $(AM_V_texinfo) --build-dir=$(@:.pdf=.t2p) -o $@ $(AM_V_texidevnull) \
 	`test -f 'libgomp.texi' || echo '$(srcdir)/'`libgomp.texi
 
-libgomp.html: libgomp.texi
+libgomp.html: libgomp.texi  
 	$(AM_V_MAKEINFO)rm -rf $(@:.html=.htp)
 	$(AM_V_at)if $(MAKEINFOHTML) $(AM_MAKEINFOHTMLFLAGS) $(MAKEINFOFLAGS) -I $(srcdir) \
 	 -o $(@:.html=.htp) `test -f 'libgomp.texi' || echo '$(srcdir)/'`libgomp.texi; \
@@ -1266,7 +1266,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/ompd-icv.Plo
 	-rm -f ./$(DEPDIR)/ompd-init.Plo
 	-rm -f ./$(DEPDIR)/ompd-support.Plo
-	-rm -f ./$(DEPDIR)/ompd_thread.Plo
+	-rm -f ./$(DEPDIR)/ompd-thread.Plo
 	-rm -f ./$(DEPDIR)/ordered.Plo
 	-rm -f ./$(DEPDIR)/parallel.Plo
 	-rm -f ./$(DEPDIR)/priority_queue.Plo
@@ -1458,7 +1458,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/ompd-icv.Plo
 	-rm -f ./$(DEPDIR)/ompd-init.Plo
 	-rm -f ./$(DEPDIR)/ompd-support.Plo
-	-rm -f ./$(DEPDIR)/ompd_thread.Plo
+	-rm -f ./$(DEPDIR)/ompd-thread.Plo
 	-rm -f ./$(DEPDIR)/ordered.Plo
 	-rm -f ./$(DEPDIR)/parallel.Plo
 	-rm -f ./$(DEPDIR)/priority_queue.Plo
