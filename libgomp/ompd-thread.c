@@ -104,7 +104,7 @@ ompd_get_thread_in_parallel (ompd_parallel_handle_t *parallel_handle,
   if (ret != ompd_rc_ok)
     return ret;
 
-  (*thread_handle)->th = &taddr;
+  (*thread_handle)->th = taddr;
   (*thread_handle)->ah = parallel_handle->ah;
   return ret;
 }
@@ -172,7 +172,7 @@ ompd_get_thread_handle (ompd_address_space_handle_t *handle,
     return ret;
 
   (*thread_handle)->ah = handle;
-  (*thread_handle)->th = &symbol_addr;
+  (*thread_handle)->th = symbol_addr;
   (*thread_handle)->thread_context = tcontext;
   return ret;
 }
@@ -206,7 +206,7 @@ ompd_thread_handle_compare (ompd_thread_handle_t *thread_handle_1,
     return ompd_rc_bad_input;
   if (thread_handle_1->ah->kind != thread_handle_2->ah->kind)
     return ompd_rc_bad_input;
-  *cmp_value = thread_handle_1->th->address - thread_handle_2->th->address;
+  *cmp_value = thread_handle_1->th.address - thread_handle_2->th.address;
   return ompd_rc_ok;
 }
 
@@ -230,7 +230,7 @@ ompd_get_thread_id (ompd_thread_handle_t *thread_handle, ompd_thread_id_t kind,
     return ompd_rc_stale_handle;
   ompd_rc_t ret;
 
-  ompd_address_t taddr = *(thread_handle->th);
+  ompd_address_t taddr = thread_handle->th;
   ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
   ompd_size_t temp_size, size;
   ompd_size_t temp_offset, offset;
