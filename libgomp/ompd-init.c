@@ -30,7 +30,7 @@ const ompd_callbacks_t *callbacks;
 
 ompd_rc_t
 ompd_initialize (ompd_word_t api_version,
-  const ompd_callbacks_t *callbacks_table)
+		 const ompd_callbacks_t *callbacks_table)
 {
   if (callbacks_table == NULL)
     return ompd_rc_bad_input;
@@ -77,7 +77,7 @@ ompd_finalize ()
 
 ompd_rc_t
 ompd_process_initialize (ompd_address_space_context_t *context,
-  ompd_address_space_handle_t **handle)
+			 ompd_address_space_handle_t **handle)
 {
   if (context == NULL || handle == NULL)
     return ompd_rc_bad_input;
@@ -109,10 +109,9 @@ ompd_process_initialize (ompd_address_space_context_t *context,
 
 ompd_rc_t
 ompd_device_initialize (ompd_address_space_handle_t *process_handle,
-  ompd_address_space_context_t *device_context, ompd_device_t kind,
-  ompd_size_t sizeof_id, void *id,
-  ompd_address_space_handle_t **device_handle)
-
+			ompd_address_space_context_t *device_context,
+			ompd_device_t kind, ompd_size_t sizeof_id, void *id,
+			ompd_address_space_handle_t **device_handle)
 {
   if (device_context == NULL)
     return ompd_rc_bad_input;

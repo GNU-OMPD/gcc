@@ -167,7 +167,7 @@ ompd_rc_t ompd_process_initialize (ompd_address_space_context_t *,
 				   ompd_address_space_handle_t **);
 
 ompd_rc_t ompd_device_initialize (ompd_address_space_handle_t *,
-  ompd_address_space_context_t *, ompd_device_t,
+				  ompd_address_space_context_t *, ompd_device_t,
 				  ompd_size_t, void *,
 				  ompd_address_space_handle_t **);
 

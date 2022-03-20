@@ -23,26 +23,27 @@
 
 #include "ompd-helper.h"
 
-static const char *ompd_icv_string[] = { "undefined",
-  #define ompd_icv_iterator(var_name, string_name, scope) string_name,
-    FOREACH_OMPD_ICV (ompd_icv_iterator)
-  #undef ompd_icv_iterator
+static const char *gompd_icv_string[] = { "undefined",
+  #define gompd_icv_iterator(var_name, string_name, scope) string_name,
+    FOREACH_OMPD_ICV (gompd_icv_iterator)
+  #undef gompd_icv_iterator
 };
 
-static const ompd_scope_t ompd_icv_scope[] = {ompd_scope_global,
-  #define ompd_icv_iterator(var_name, string_name, scope) scope,
-    FOREACH_OMPD_ICV (ompd_icv_iterator)
-  #undef ompd_icv_iterator
+static const ompd_scope_t gompd_icv_scope[] = {ompd_scope_global,
+  #define gompd_icv_iterator(var_name, string_name, scope) scope,
+    FOREACH_OMPD_ICV (gompd_icv_iterator)
+  #undef gompd_icv_iterator
 };
 
 ompd_rc_t
 ompd_enumerate_icvs (ompd_address_space_handle_t *ah,
-  ompd_icv_id_t current, ompd_icv_id_t *next_id, const char **next_icv_name,
-  ompd_scope_t *next_scope, int *more)
+		     ompd_icv_id_t current, ompd_icv_id_t *next_id,
+		     const char **next_icv_name,
+		     ompd_scope_t *next_scope, int *more)
 {
   if (ah == NULL)
     return ompd_rc_stale_handle;
-  if (current + 1 >= ompd_last_icv_var || next_id == NULL
+  if (current + 1 >= gompd_last_icv_var || next_id == NULL
     || next_icv_name == NULL || next_scope == NULL || more == NULL)
       return ompd_rc_bad_input;
   if (callbacks == NULL)
@@ -50,13 +51,13 @@ ompd_enumerate_icvs (ompd_address_space_handle_t *ah,
   *next_id = current + 1;
   char *temp_name = NULL;
   ompd_rc_t ret
-    = callbacks->alloc_memory (strlen (ompd_icv_string[*next_id]) + 1,
+    = callbacks->alloc_memory (strlen (gompd_icv_string[*next_id]) + 1,
 			       (void **) &temp_name);
   CHECK_RET (ret);
-  strcpy (temp_name, ompd_icv_string[*next_id]);
+  strcpy (temp_name, gompd_icv_string[*next_id]);
   *next_icv_name = temp_name;
-  *next_scope = ompd_icv_scope[*next_id];
-  if ((*next_id) + 1 < ompd_last_icv_var)
+  *next_scope = gompd_icv_scope[*next_id];
+  if ((*next_id) + 1 < gompd_last_icv_var)
     *more = 1;
   else
     *more = 0;
@@ -65,11 +66,11 @@ ompd_enumerate_icvs (ompd_address_space_handle_t *ah,
 
 ompd_rc_t
 ompd_get_icv_from_scope (void *handle, ompd_scope_t scope, ompd_icv_id_t icv_id,
-  ompd_word_t *icv_value)
+			 ompd_word_t *icv_value)
 {
   if (handle == NULL)
     return ompd_rc_stale_handle;
-  if (icv_value == NULL || !icv_id || icv_id >= ompd_last_icv_var)
+  if (icv_value == NULL || !icv_id || icv_id >= gompd_last_icv_var)
     return ompd_rc_bad_input;
   if (callbacks == NULL)
     return ompd_rc_callback_error;
@@ -96,52 +97,55 @@ ompd_get_icv_from_scope (void *handle, ompd_scope_t scope, ompd_icv_id_t icv_id,
     {
       switch (icv_id)
 	{
-	  case ompd_icv_cancellation_var:
+	  case gompd_icv_cancellation_var:
 	    return
-	      ompd_get_cancellation ((ompd_address_space_handle_t *) handle,
-				     icv_value);
-	  case ompd_icv_max_task_priority_var:
-	    return ompd_get_max_task_priority ((ompd_address_space_handle_t *)
-					       handle, icv_value);
-	  case ompd_icv_stacksize_var:
-	    return ompd_get_stacksize ((ompd_address_space_handle_t *) handle,
-				       icv_value);
-	  case ompd_icv_debug_var:
-	    return ompd_get_debug ((ompd_address_space_handle_t *) handle,
-				   icv_value);
-	  case ompd_icv_display_affinity_var:
+	      gompd_get_cancellation ((ompd_address_space_handle_t *) handle,
+				      icv_value);
+	  case gompd_icv_max_task_priority_var:
+	    return gompd_get_max_task_priority ((ompd_address_space_handle_t *)
+						handle, icv_value);
+	  case gompd_icv_stacksize_var:
+	    return gompd_get_stacksize ((ompd_address_space_handle_t *) handle,
+					icv_value);
+	  case gompd_icv_debug_var:
+	    return gompd_get_debug ((ompd_address_space_handle_t *) handle,
+				    icv_value);
+	  case gompd_icv_display_affinity_var:
 	    return
-	      ompd_get_display_affinity ((ompd_address_space_handle_t *) handle,
-					 icv_value);
-	  case ompd_icv_affinity_format_var:
+	      gompd_get_display_affinity ((ompd_address_space_handle_t *)
+					  handle, icv_value);
+	  case gompd_icv_affinity_format_var:
 	    return ompd_rc_incompatible;
-	  case ompd_icv_affinity_format_len_var:
-	    return ompd_get_affinity_format_len ((ompd_address_space_handle_t *)
-						 handle, icv_value);
-	   case ompd_icv_wait_policy_var:
-	     return ompd_get_wait_policy ((ompd_address_space_handle_t *)handle,
-					  icv_value);
-	   case ompd_icv_num_teams_var:
-	     return ompd_get_num_teams ((ompd_address_space_handle_t *)handle,
-					icv_value);
-	   case ompd_icv_teams_thread_limit_var:
-	     return ompd_get_teams_thread_limit ((ompd_address_space_handle_t *)
-						 handle, icv_value);
-	   case ompd_icv_spin_count_var:
-	     return ompd_get_spin_count ((ompd_address_space_handle_t *) handle,
+	  case gompd_icv_affinity_format_len_var:
+	    return gompd_get_affinity_format_len
+		    ((ompd_address_space_handle_t *) handle, icv_value);
+	   case gompd_icv_wait_policy_var:
+	     return
+	       gompd_get_wait_policy ((ompd_address_space_handle_t *)handle,
+				      icv_value);
+	   case gompd_icv_num_teams_var:
+	     return gompd_get_num_teams ((ompd_address_space_handle_t *)handle,
 					 icv_value);
-	   case ompd_icv_num_proc_var:
+	   case gompd_icv_teams_thread_limit_var:
 	     return
-	       ompd_get_available_cpus ((ompd_address_space_handle_t *) handle,
-					icv_value);
-	   case ompd_icv_throttled_spin_count_var:
+	       gompd_get_teams_thread_limit ((ompd_address_space_handle_t *)
+					     handle, icv_value);
+	   case gompd_icv_spin_count_var:
 	     return
-	       ompd_get_throttled_spin_count ((ompd_address_space_handle_t *)
-					      handle, icv_value);
-	   case ompd_icv_managed_threads_var:
+	       gompd_get_spin_count ((ompd_address_space_handle_t *) handle,
+				     icv_value);
+	   case gompd_icv_num_proc_var:
 	     return
-	       ompd_get_managed_threads ((ompd_address_space_handle_t *)
-					 handle, icv_value);
+	       gompd_get_available_cpus ((ompd_address_space_handle_t *) handle,
+					 icv_value);
+	   case gompd_icv_throttled_spin_count_var:
+	     return
+	       gompd_get_throttled_spin_count ((ompd_address_space_handle_t *)
+					       handle, icv_value);
+	   case gompd_icv_managed_threads_var:
+	     return
+	       gompd_get_managed_threads ((ompd_address_space_handle_t *)
+					  handle, icv_value);
 	  default:
 	    return ompd_rc_unsupported;
 	 }
@@ -151,11 +155,11 @@ ompd_get_icv_from_scope (void *handle, ompd_scope_t scope, ompd_icv_id_t icv_id,
 
 ompd_rc_t
 ompd_get_icv_string_from_scope (void *handle, ompd_scope_t scope,
-  ompd_icv_id_t icv_id, const char **icv_value)
+				ompd_icv_id_t icv_id, const char **icv_value)
 {
   if (handle == NULL)
     return ompd_rc_stale_handle;
-  if (icv_value == NULL || !icv_id || icv_id >= ompd_last_icv_var)
+  if (icv_value == NULL || !icv_id || icv_id >= gompd_last_icv_var)
     return ompd_rc_bad_input;
   if (callbacks == NULL)
     return ompd_rc_callback_error;
@@ -163,29 +167,29 @@ ompd_get_icv_string_from_scope (void *handle, ompd_scope_t scope,
   switch (scope)
     {
       case ompd_scope_address_space:
-	 device = ((ompd_address_space_handle_t *) handle)->kind;
-	 break;
+	device = ((ompd_address_space_handle_t *) handle)->kind;
+	break;
       case ompd_scope_thread:
-	 device = ((ompd_thread_handle_t *) handle)->ah->kind;
-	 break;
+	device = ((ompd_thread_handle_t *) handle)->ah->kind;
+	break;
       case ompd_scope_parallel:
-	 device = ((ompd_parallel_handle_t *) handle)->ah->kind;
-	 break;
+	device = ((ompd_parallel_handle_t *) handle)->ah->kind;
+	break;
       case ompd_scope_task:
-	 device = ((ompd_task_handle_t *) handle)->ah->kind;
-	 break;
+	device = ((ompd_task_handle_t *) handle)->ah->kind;
+	break;
       default:
-	 return ompd_rc_bad_input;
+	return ompd_rc_bad_input;
     }
   /* No cuda.  */
   if (device == OMPD_DEVICE_KIND_HOST)
     {
       switch (icv_id)
 	 {
-	  case ompd_icv_affinity_format_var:
+	  case gompd_icv_affinity_format_var:
 	    return
-	      ompd_get_affinity_format ((ompd_address_space_handle_t *) handle,
-					icv_value);
+	      gompd_get_affinity_format ((ompd_address_space_handle_t *) handle,
+					 icv_value);
 	  default:
 	    return ompd_rc_unsupported;
 	 }

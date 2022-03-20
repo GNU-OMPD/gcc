@@ -134,51 +134,51 @@ typedef struct _ompd_task_handle
 
 enum ompd_icv
 {
-  ompd_icv_undefined_var = 0,
-  #define ompd_icv_iterator(var_name, string_name, scope) ompd_icv_##var_name,
-    FOREACH_OMPD_ICV (ompd_icv_iterator)
-  #undef ompd_icv_iterator
-  ompd_last_icv_var
+  gompd_icv_undefined_var = 0,
+  #define gompd_icv_iterator(var_name, string_name, scope) gompd_icv_##var_name,
+    FOREACH_OMPD_ICV (gompd_icv_iterator)
+  #undef gompd_icv_iterator
+  gompd_last_icv_var
 };
 
 ompd_rc_t get_sizes (ompd_address_space_context_t *);
 
 /* Get Local internal control variables.  */
-ompd_rc_t ompd_get_nthread (ompd_thread_handle_t *, ompd_word_t *);
-ompd_rc_t ompd_get_thread_limit (ompd_task_handle_t *, ompd_word_t *);
-ompd_rc_t ompd_get_run_sched (ompd_task_handle_t *,  ompd_word_t *);
-ompd_rc_t ompd_get_run_sched_chunk_size (ompd_task_handle_t *, ompd_word_t *);
-ompd_rc_t ompd_get_default_device (ompd_thread_handle_t *, ompd_word_t *);
-ompd_rc_t ompd_get_dynamic (ompd_thread_handle_t *, ompd_word_t *);
-ompd_rc_t ompd_get_max_active_levels (ompd_task_handle_t *, ompd_word_t *);
-ompd_rc_t ompd_get_proc_bind (ompd_task_handle_t *, ompd_word_t *);
-ompd_rc_t ompd_is_final (ompd_task_handle_t *, ompd_word_t *);
-ompd_rc_t ompd_is_implicit (ompd_task_handle_t *, ompd_word_t *);
-ompd_rc_t ompd_get_team_size (ompd_parallel_handle_t *, ompd_word_t *);
+ompd_rc_t gompd_get_nthread (ompd_thread_handle_t *, ompd_word_t *);
+ompd_rc_t gompd_get_thread_limit (ompd_task_handle_t *, ompd_word_t *);
+ompd_rc_t gompd_get_run_sched (ompd_task_handle_t *,  ompd_word_t *);
+ompd_rc_t gompd_get_run_sched_chunk_size (ompd_task_handle_t *, ompd_word_t *);
+ompd_rc_t gompd_get_default_device (ompd_thread_handle_t *, ompd_word_t *);
+ompd_rc_t gompd_get_dynamic (ompd_thread_handle_t *, ompd_word_t *);
+ompd_rc_t gompd_get_max_active_levels (ompd_task_handle_t *, ompd_word_t *);
+ompd_rc_t gompd_get_proc_bind (ompd_task_handle_t *, ompd_word_t *);
+ompd_rc_t gompd_is_final (ompd_task_handle_t *, ompd_word_t *);
+ompd_rc_t gompd_is_implicit (ompd_task_handle_t *, ompd_word_t *);
+ompd_rc_t gompd_get_team_size (ompd_parallel_handle_t *, ompd_word_t *);
 
 /* Get Global ICVs.  */
-ompd_rc_t ompd_get_cancellation (ompd_address_space_handle_t *, ompd_word_t *);
-ompd_rc_t ompd_get_max_task_priority (ompd_address_space_handle_t *,
-  				      ompd_word_t *);
-ompd_rc_t ompd_get_stacksize (ompd_address_space_handle_t *, ompd_word_t *);
-ompd_rc_t ompd_get_debug (ompd_address_space_handle_t *, ompd_word_t *);
-ompd_rc_t ompd_get_display_affinity (ompd_address_space_handle_t *,
-				     ompd_word_t *);
-ompd_rc_t ompd_get_affinity_format (ompd_address_space_handle_t *,
-				    const char **);
-ompd_rc_t ompd_get_affinity_format_len (ompd_address_space_handle_t *,
-					ompd_word_t *);
-ompd_rc_t ompd_get_wait_policy (ompd_address_space_handle_t *, ompd_word_t *);
-ompd_rc_t ompd_get_num_teams (ompd_address_space_handle_t *, ompd_word_t *);
-ompd_rc_t ompd_get_teams_thread_limit (ompd_address_space_handle_t *,
-				       ompd_word_t *);
-ompd_rc_t ompd_get_spin_count (ompd_address_space_handle_t *, ompd_word_t *);
-ompd_rc_t ompd_get_available_cpus (ompd_address_space_handle_t *,
-				   ompd_word_t *);
-ompd_rc_t ompd_get_throttled_spin_count (ompd_address_space_handle_t *,
+ompd_rc_t gompd_get_cancellation (ompd_address_space_handle_t *, ompd_word_t *);
+ompd_rc_t gompd_get_max_task_priority (ompd_address_space_handle_t *,
+  				       ompd_word_t *);
+ompd_rc_t gompd_get_stacksize (ompd_address_space_handle_t *, ompd_word_t *);
+ompd_rc_t gompd_get_debug (ompd_address_space_handle_t *, ompd_word_t *);
+ompd_rc_t gompd_get_display_affinity (ompd_address_space_handle_t *,
+				      ompd_word_t *);
+ompd_rc_t gompd_get_affinity_format (ompd_address_space_handle_t *,
+				     const char **);
+ompd_rc_t gompd_get_affinity_format_len (ompd_address_space_handle_t *,
 					 ompd_word_t *);
-ompd_rc_t ompd_get_managed_threads (ompd_address_space_handle_t *,
+ompd_rc_t gompd_get_wait_policy (ompd_address_space_handle_t *, ompd_word_t *);
+ompd_rc_t gompd_get_num_teams (ompd_address_space_handle_t *, ompd_word_t *);
+ompd_rc_t gompd_get_teams_thread_limit (ompd_address_space_handle_t *,
+					ompd_word_t *);
+ompd_rc_t gompd_get_spin_count (ompd_address_space_handle_t *, ompd_word_t *);
+ompd_rc_t gompd_get_available_cpus (ompd_address_space_handle_t *,
 				    ompd_word_t *);
+ompd_rc_t gompd_get_throttled_spin_count (ompd_address_space_handle_t *,
+					  ompd_word_t *);
+ompd_rc_t gompd_get_managed_threads (ompd_address_space_handle_t *,
+				     ompd_word_t *);
 /*End of Global ICVs.  */
 
 #ifdef __cplusplus

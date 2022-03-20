@@ -27,7 +27,8 @@ ompd_device_type_sizes_t target_sizes;
 
 /* Get global ICVs.  */
 ompd_rc_t
-ompd_get_cancellation (ompd_address_space_handle_t *ah, ompd_word_t *cancel_var)
+gompd_get_cancellation (ompd_address_space_handle_t *ah,
+			ompd_word_t *cancel_var)
 {
   CHECK (ah);
   ompd_word_t cancel = 0;
@@ -40,8 +41,8 @@ ompd_get_cancellation (ompd_address_space_handle_t *ah, ompd_word_t *cancel_var)
 }
 
 ompd_rc_t
-ompd_get_max_task_priority (ompd_address_space_handle_t *ah,
-  ompd_word_t *task_p)
+gompd_get_max_task_priority (ompd_address_space_handle_t *ah,
+			     ompd_word_t *task_p)
 {
   CHECK (ah);
   ompd_word_t task_priority = 0;
@@ -54,7 +55,7 @@ ompd_get_max_task_priority (ompd_address_space_handle_t *ah,
 }
 
 ompd_rc_t
-ompd_get_stacksize (ompd_address_space_handle_t *ah, ompd_word_t *stacksize)
+gompd_get_stacksize (ompd_address_space_handle_t *ah, ompd_word_t *stacksize)
 {
   CHECK (ah);
   ompd_word_t stack_var = 0;
@@ -67,7 +68,7 @@ ompd_get_stacksize (ompd_address_space_handle_t *ah, ompd_word_t *stacksize)
 }
 
 ompd_rc_t
-ompd_get_debug (ompd_address_space_handle_t *ah, ompd_word_t *debug_var)
+gompd_get_debug (ompd_address_space_handle_t *ah, ompd_word_t *debug_var)
 {
   CHECK (ah);
   ompd_word_t debug = 0;
@@ -80,7 +81,7 @@ ompd_get_debug (ompd_address_space_handle_t *ah, ompd_word_t *debug_var)
 }
 
 ompd_rc_t
-ompd_get_display_affinity (ompd_address_space_handle_t *ah, ompd_word_t *aff)
+gompd_get_display_affinity (ompd_address_space_handle_t *ah, ompd_word_t *aff)
 {
   CHECK (ah);
   ompd_word_t affin = 0;
@@ -93,7 +94,8 @@ ompd_get_display_affinity (ompd_address_space_handle_t *ah, ompd_word_t *aff)
 }
 
 ompd_rc_t
-ompd_get_affinity_format_len (ompd_address_space_handle_t *ah, ompd_word_t *len)
+gompd_get_affinity_format_len (ompd_address_space_handle_t *ah,
+			       ompd_word_t *len)
 {
   CHECK (ah);
   ompd_word_t len_var = 0;
@@ -106,7 +108,7 @@ ompd_get_affinity_format_len (ompd_address_space_handle_t *ah, ompd_word_t *len)
 }
 
 ompd_rc_t
-ompd_get_affinity_format (ompd_address_space_handle_t *ah, const char **string)
+gompd_get_affinity_format (ompd_address_space_handle_t *ah, const char **string)
 {
   CHECK (ah);
   ompd_word_t len = 100;
@@ -134,7 +136,8 @@ ompd_get_affinity_format (ompd_address_space_handle_t *ah, const char **string)
 }
 
 ompd_rc_t
-ompd_get_wait_policy (ompd_address_space_handle_t *ah, ompd_word_t *wait_policy)
+gompd_get_wait_policy (ompd_address_space_handle_t *ah,
+		       ompd_word_t *wait_policy)
 {
   CHECK (ah);
   ompd_word_t wait_p = 0;
@@ -147,7 +150,7 @@ ompd_get_wait_policy (ompd_address_space_handle_t *ah, ompd_word_t *wait_policy)
 }
 
 ompd_rc_t
-ompd_get_num_teams (ompd_address_space_handle_t *ah, ompd_word_t *num_teams)
+gompd_get_num_teams (ompd_address_space_handle_t *ah, ompd_word_t *num_teams)
 {
   CHECK (ah);
   ompd_word_t num_t = 0;
@@ -160,8 +163,8 @@ ompd_get_num_teams (ompd_address_space_handle_t *ah, ompd_word_t *num_teams)
 }
 
 ompd_rc_t
-ompd_get_teams_thread_limit (ompd_address_space_handle_t *ah,
-  ompd_word_t *thread_limit)
+gompd_get_teams_thread_limit (ompd_address_space_handle_t *ah,
+			      ompd_word_t *thread_limit)
 {
   CHECK (ah);
   ompd_word_t thr_lim = 0;
@@ -174,7 +177,7 @@ ompd_get_teams_thread_limit (ompd_address_space_handle_t *ah,
 }
 
 ompd_rc_t
-ompd_get_spin_count (ompd_address_space_handle_t *ah, ompd_word_t *spin_count)
+gompd_get_spin_count (ompd_address_space_handle_t *ah, ompd_word_t *spin_count)
 {
   CHECK (ah);
   ompd_word_t spins = 0;
@@ -187,7 +190,7 @@ ompd_get_spin_count (ompd_address_space_handle_t *ah, ompd_word_t *spin_count)
 }
 
 ompd_rc_t
-ompd_get_available_cpus (ompd_address_space_handle_t *ah, ompd_word_t *procs)
+gompd_get_available_cpus (ompd_address_space_handle_t *ah, ompd_word_t *procs)
 {
   CHECK (ah);
   ompd_word_t cpus = 0;
@@ -200,8 +203,8 @@ ompd_get_available_cpus (ompd_address_space_handle_t *ah, ompd_word_t *procs)
 }
 
 ompd_rc_t
-ompd_get_throttled_spin_count (ompd_address_space_handle_t *ah,
-  ompd_word_t *throt)
+gompd_get_throttled_spin_count (ompd_address_space_handle_t *ah,
+				ompd_word_t *throt)
 {
   CHECK (ah);
   ompd_word_t temp = 0;
@@ -214,7 +217,7 @@ ompd_get_throttled_spin_count (ompd_address_space_handle_t *ah,
 }
 
 ompd_rc_t
-ompd_get_managed_threads (ompd_address_space_handle_t *ah, ompd_word_t *man_th)
+gompd_get_managed_threads (ompd_address_space_handle_t *ah, ompd_word_t *man_th)
 {
   CHECK (ah);
   ompd_word_t temp = 0;
