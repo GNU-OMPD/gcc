@@ -53,7 +53,7 @@ ompd_get_thread_in_parallel (ompd_parallel_handle_t *parallel_handle,
 
   ompd_word_t team_size_var;
   ret = ompd_get_icv_from_scope ((void *) parallel_handle, ompd_scope_parallel,
-				 ompd_icv_team_size_var, &team_size_var);
+				 gompd_icv_team_size_var, &team_size_var);
   if (ret != ompd_rc_ok)
     return ret;
   if (thread_num < 0 || thread_num >= team_size_var)

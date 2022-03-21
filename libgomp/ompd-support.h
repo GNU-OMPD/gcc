@@ -1,4 +1,4 @@
-/* Copyright (C) 2021 Free Software Foundation, Inc.
+/* Copyright (C) 2022 Free Software Foundation, Inc.
    Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
    This file is part of the GNU Offloading and Multi Processing Library
    (libgomp).
@@ -18,41 +18,40 @@
    see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
    <http://www.gnu.org/licenses/>.  */
 
-
-
-/*This file contains the runtime support for OMPD.  */
+/*This file contains the runtime support for gompd.  */
 
 #ifndef _OMPD_SUPPORT_H
 #define _OMPD_SUPPORT_H
 
 #include "omp-tools.h"
 #include "plugin-suffix.h"
+#include "libgomp.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stddef.h>
 
+void gompd_load ();
+extern __UINT64_TYPE__ gompd_state;
 
-#if OMPD_SUPPORT
+#define OMPD_ENABLED 0x1
 
-void ompd_load();
-extern __UINT64_TYPE__ ompd_state;
+#define GOMPD_FOREACH_ACCESS(gompd_access) \
+   gompd_access (gomp_task_icv, nthreads_var) \
+   gompd_access (gomp_task_icv, run_sched_var) \
+   gompd_access (gomp_task_icv, run_sched_chunk_size) \
+   gompd_access (gomp_task_icv, default_device_var) \
+   gompd_access (gomp_task_icv, thread_limit_var) \
+   gompd_access (gomp_task_icv, dyn_var) \
+   gompd_access (gomp_task_icv, bind_var) \
+   gompd_access (gomp_thread, task) \
+   gompd_access (gomp_thread_pool, threads) \
+   gompd_access (gomp_thread, ts) \
+   gompd_access (gomp_team_state, team_id) \
 
+#define GOMPD_SIZES(gompd_size) \
+   gompd_size (gomp_thread) \
+   gompd_size (gomp_task_icv) \
+   gompd_size (gomp_task)
 
-#define OMPD_FOREACH_ACCESS(OMPD_ACCESS) \
-OMPD_ACCESS(gomp_thread_pool, threads) \
-OMPD_ACCESS(gomp_thread, handle) \
-OMPD_ACCESS(gomp_thread, thread_pool)
-
-#define OMPD_FOREACH_SIZEOF(OMPD_SIZEOF) \
-OMPD_SIZEOF(int) \
-OMPD_SIZEOF(char) \
-OMPD_SIZEOF(ompd_state) \
-OMPD_SIZEOF(ompd_thread_id_t) \
-OMPD_SIZEOF(gomp_tls_key) \
-OMPD_SIZEOF(gomp_tls_data) \
-
-
-
-#endif /* OMPD_SUPPORT */
 #endif /* _OMPD_SUPPORT_H */

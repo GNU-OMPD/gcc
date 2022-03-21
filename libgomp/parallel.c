@@ -26,7 +26,6 @@
 /* This file handles the (bare) PARALLEL construct.  */
 
 #include "libgomp.h"
-#include "ompd-support.h"
 #include <limits.h>
 
 
@@ -173,15 +172,11 @@ void
 GOMP_parallel (void (*fn) (void *), void *data, unsigned num_threads,
 	       unsigned int flags)
 {
-  if(ompd_state)
-    ompd_bp_parallel_begin();
   num_threads = gomp_resolve_num_threads (num_threads, 0);
   gomp_team_start (fn, data, num_threads, flags, gomp_new_team (num_threads),
 		   NULL);
   fn (data);
   ialias_call (GOMP_parallel_end) ();
-  if(ompd_state)
-    ompd_bp_parallel_end();
 }
 
 unsigned

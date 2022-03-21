@@ -30,6 +30,7 @@
 #include "pool.h"
 #include <stdlib.h>
 #include <string.h>
+#include "ompd-support.h"
 
 #ifdef LIBGOMP_USE_PTHREADS
 pthread_attr_t gomp_thread_attr;
@@ -171,16 +172,10 @@ gomp_new_team (unsigned nthreads)
 {
   struct gomp_team *team;
   int i;
-  /*
-    gets last_team in pool only if it has the nthreads null other wise
-  */
+
   team = get_last_team (nthreads);
   if (team == NULL)
-    { /* sizeof gomp_sem_t + sizeof gomp_task */
-      /* (ordered_release) points to an array with pointers to the release
-          semaphore of the threads in the team. gomp_sem_t **ordered_release;*/
-      /* implicit_task array contains structures for implicit tasks( struct
-          gomp_task).  struct gomp_task implicit_task[];*/
+    {
       size_t extra = sizeof (team->ordered_release[0])
 		     + sizeof (team->implicit_task[0]);
 #ifdef GOMP_USE_ALIGNED_WORK_SHARES
@@ -327,6 +322,7 @@ gomp_team_start (void (*fn) (void *), void *data, unsigned nthreads,
 		 unsigned flags, struct gomp_team *team,
 		 struct gomp_taskgroup *taskgroup)
 {
+  ompd_bp_parallel_begin ();
   struct gomp_thread_start_data *start_data = NULL;
   struct gomp_thread *thr, *nthr;
   struct gomp_task *task;
@@ -349,11 +345,6 @@ gomp_team_start (void (*fn) (void *), void *data, unsigned nthreads,
   icv = task ? &task->icv : &gomp_global_icv;
   if (__builtin_expect (gomp_places_list != NULL, 0) && thr->place == 0)
     {
-      /*
-      thr->place = 1;
-      thr->ts.place_partition_off = 0;
-      thr->ts.place_partition_len = gomp_places_list_len;
-      */
       gomp_init_affinity ();
       if (__builtin_expect (gomp_display_affinity_var, 0) && nthreads == 1)
 	gomp_display_affinity_thread (gomp_thread_self (), &thr->ts,
@@ -1022,6 +1013,7 @@ gomp_team_end (void)
       pool->last_team = team;
       gomp_release_thread_pool (pool);
     }
+  ompd_bp_parallel_end ();
 }
 
 #ifdef LIBGOMP_USE_PTHREADS

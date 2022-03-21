@@ -84,6 +84,7 @@ libgomp_la_DEPENDENCIES = $(libgomp_version_dep)
 libgompd_la_DEPENDENCIES = $(libgompd_version_dep)
 libgomp_la_LINK = $(LINK) $(libgomp_la_LDFLAGS)
 libgompd_la_LINK = $(LINK) $(libgompd_la_LDFLAGS)
+
 libgomp_la_SOURCES = alloc.c atomic.c barrier.c critical.c env.c error.c \
 	icv.c icv-device.c iter.c iter_ull.c loop.c loop_ull.c ordered.c \
 	parallel.c scope.c sections.c single.c task.c team.c work.c lock.c \

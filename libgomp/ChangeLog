@@ -1,5 +1,3 @@
-
-
 2022-02-04  Tobias Burnus  <tobias@codesourcery.com>
 
 	* testsuite/libgomp.fortran/allocate-1.f90: Remove spurious
@@ -8431,7 +8429,7 @@
 	* config.h.in: Likewise.
 	* config/posix/affinity.c: Move to...
 	* affinity.c: ...here (new file).  Guard use of Pthreads-specific
-	interface by LIBGOMP_USE_PTHREADS. 
+	interface by LIBGOMP_USE_PTHREADS.
 	* critical.c: Split out GOMP_atomic_{start,end} into...
 	* atomic.c: ...here (new file).
 	* env.c: Split out ICV definitions into...
