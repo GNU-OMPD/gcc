@@ -238,8 +238,12 @@ ompd_get_thread_id (ompd_thread_handle_t *thread_handle, ompd_thread_id_t kind,
   const char *symbol_name = "ompd_sizeof_gomp_thread_handle";
   ret = callbacks->symbol_addr_lookup (context, NULL, symbol_name, &symbol_addr,
 	  			       NULL);
+  if (!symbol_addr.address)
+    return ompd_rc_unsupported;	  			       
   ret = callbacks->read_memory (context, NULL, &symbol_addr,
 	  		        target_sizes.sizeof_long_long, &(temp_size));
+  if (ret != ompd_rc_ok)
+    return ret;
   ret = callbacks->device_to_host (context, &temp_size,
 	  			   target_sizes.sizeof_long_long, 1, &(size));
   if (ret != ompd_rc_ok)
@@ -250,13 +254,17 @@ ompd_get_thread_id (ompd_thread_handle_t *thread_handle, ompd_thread_id_t kind,
   symbol_name = "ompd_access_gomp_thread_handle";
   ret = callbacks->symbol_addr_lookup (context, NULL, symbol_name, &symbol_addr,
 	  			       NULL);
-  if (!symbol_addr.address)
-    return ompd_rc_unsupported;
+  if (ret != ompd_rc_ok)
+    return ret;
   ret = callbacks->read_memory (context, NULL, &symbol_addr,
 	  		        target_sizes.sizeof_long_long, &(temp_offset));
+  if (ret != ompd_rc_ok)
+    return ret;
   ret = callbacks->device_to_host (context, &temp_offset,
 	  			   target_sizes.sizeof_long_long, 1, &offset);
-
+  if (ret != ompd_rc_ok)
+    return ret;
+    
   taddr.address += offset;
   ret = callbacks->read_memory (context, tcontext, &taddr, size, thread_id);
   return ret;
