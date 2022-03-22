@@ -75,7 +75,7 @@ gomp_thread_start (void *xdata)
   struct gomp_thread_pool *pool;
   void (*local_fn) (void *);
   void *local_data;
-
+  ompd_bp_thread_begin ();
 #if defined HAVE_TLS || defined USE_EMUTLS
   thr = &gomp_tls_data;
 #else

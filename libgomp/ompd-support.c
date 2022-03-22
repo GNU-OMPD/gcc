@@ -60,6 +60,12 @@ gompd_load ()
     GOMPD_SIZES (gompd_init_sizes)
   #undef gompd_init_sizes
 
+  #ifdef GOMP_NEEDS_THREAD_HANDLE
+    __UINT64_TYPE__ gompd_access_gomp_thread_handle
+      = (__UINT64_TYPE__) & (((struct gomp_thread *) NULL)->handle);
+    __UINT64_TYPE__ gompd_sizeof_gomp_thread_handle
+      = sizeof (((struct gomp_thread *) NULL)->handle);
+  #endif
   gomp_debug (2, "OMP OMPD active\n");
   static const char *ompd_dll_locations_array[2]
     = {"libgompd" SONAME_SUFFIX (1) , NULL};

@@ -235,11 +235,11 @@ ompd_get_thread_id (ompd_thread_handle_t *thread_handle, ompd_thread_id_t kind,
   ompd_size_t temp_size, size;
   ompd_size_t temp_offset, offset;
 
-  const char *symbol_name = "ompd_sizeof_gomp_thread_handle";
+  const char *symbol_name = "gompd_sizeof_gomp_thread_handle";
   ret = callbacks->symbol_addr_lookup (context, NULL, symbol_name, &symbol_addr,
 	  			       NULL);
   if (!symbol_addr.address)
-    return ompd_rc_unsupported;	  			       
+    return ompd_rc_unsupported;
   ret = callbacks->read_memory (context, NULL, &symbol_addr,
 	  		        target_sizes.sizeof_long_long, &(temp_size));
   if (ret != ompd_rc_ok)
@@ -251,7 +251,7 @@ ompd_get_thread_id (ompd_thread_handle_t *thread_handle, ompd_thread_id_t kind,
   if (sizeof_thread_id != size)
     return ompd_rc_bad_input;
 
-  symbol_name = "ompd_access_gomp_thread_handle";
+  symbol_name = "gompd_access_gomp_thread_handle";
   ret = callbacks->symbol_addr_lookup (context, NULL, symbol_name, &symbol_addr,
 	  			       NULL);
   if (ret != ompd_rc_ok)
@@ -264,7 +264,7 @@ ompd_get_thread_id (ompd_thread_handle_t *thread_handle, ompd_thread_id_t kind,
 	  			   target_sizes.sizeof_long_long, 1, &offset);
   if (ret != ompd_rc_ok)
     return ret;
-    
+
   taddr.address += offset;
   ret = callbacks->read_memory (context, tcontext, &taddr, size, thread_id);
   return ret;

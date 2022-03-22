@@ -26,6 +26,7 @@
 #include "omp-tools.h"
 #include "plugin-suffix.h"
 #include "libgomp.h"
+#include <pthread.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -48,10 +49,11 @@ extern __UINT64_TYPE__ gompd_state;
   gompd_access (gomp_thread_pool, threads) \
   gompd_access (gomp_thread, ts) \
   gompd_access (gomp_team_state, team_id) \
-  
+
 #define GOMPD_SIZES(gompd_size) \
   gompd_size (gomp_thread) \
   gompd_size (gomp_task_icv) \
   gompd_size (gomp_task)
+
 
 #endif /* _OMPD_SUPPORT_H */
