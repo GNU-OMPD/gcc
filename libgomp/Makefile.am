@@ -79,7 +79,7 @@ libgompd_version_info = -version-info $(libtool_VERSION)
 libgomp_la_LDFLAGS = $(libgomp_version_info) $(libgomp_version_script) \
         $(lt_host_flags)
 libgompd_la_LDFLAGS = $(libgompd_version_info) $(libgompd_version_script) \
-		$(lt_host_flags)
+        $(lt_host_flags)
 libgomp_la_DEPENDENCIES = $(libgomp_version_dep)
 libgompd_la_DEPENDENCIES = $(libgompd_version_dep)
 libgomp_la_LINK = $(LINK) $(libgomp_la_LDFLAGS)
