@@ -425,19 +425,20 @@ parse_target_offload (const char *name, enum gomp_target_offload_t *offload)
 static void
 parse_debug (const char *name, bool *debug_value)
 {
-  char *env = getenv (name);
+  const char *env;
   bool ret = false;
+  env = getenv (name);
   if (env == NULL)
     return;
   while (isspace ((unsigned char) *env))
-    env++;
+    ++env;
   if (strncasecmp (env, "enabled", 7) == 0)
     {
       env += 7;
       ret = true;
     }
   while (isspace ((unsigned char) *env))
-    env++;
+    ++env;
   if (ret && *env == '\0')
     {
       *debug_value = ret;

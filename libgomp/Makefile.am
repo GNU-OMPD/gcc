@@ -9,7 +9,7 @@ gcc_version := $(shell @get_gcc_base_ver@ $(top_srcdir)/../gcc/BASE-VER)
 
 config_path = @config_path@
 search_path = $(addprefix $(top_srcdir)/config/, $(config_path)) $(top_srcdir) \
-	      $(top_srcdir)/../include
+		  $(top_srcdir)/../include
 
 fincludedir = $(libdir)/gcc/$(target_alias)/$(gcc_version)$(MULTISUBDIR)/finclude
 libsubincludedir = $(libdir)/gcc/$(target_alias)/$(gcc_version)/include
@@ -54,7 +54,7 @@ libgomp.ver-sun : libgomp.ver \
 	  libgomp.ver \
 	  $(libgomp_la_OBJECTS:%.lo=.libs/%.o) \
 	 `echo $(libgomp_la_LIBADD) | \
-	    sed 's,/\([^/.]*\)\.la,/.libs/\1.a,g'` \
+		sed 's,/\([^/.]*\)\.la,/.libs/\1.a,g'` \
 	 > $@ || (rm -f $@ ; exit 1)
 
 libgompd.ver-sun : libgompd.ver \
@@ -64,7 +64,7 @@ libgompd.ver-sun : libgompd.ver \
 	  libgompd.ver \
 	  $(libgompd_la_OBJECTS:%.lo=.libs/%.o) \
 	 `echo $(libgompd_la_LIBADD) | \
-	    sed 's,/\([^/.]*\)\.la,/.libs/\1.a,g'` \
+		sed 's,/\([^/.]*\)\.la,/.libs/\1.a,g'` \
 	 > $@ || (rm -f $@ ; exit 1)
 
 endif
@@ -77,9 +77,9 @@ endif
 libgomp_version_info = -version-info $(libtool_VERSION)
 libgompd_version_info = -version-info $(libtool_VERSION)
 libgomp_la_LDFLAGS = $(libgomp_version_info) $(libgomp_version_script) \
-	$(lt_host_flags)
+		$(lt_host_flags)
 libgompd_la_LDFLAGS = $(libgompd_version_info) $(libgompd_version_script) \
-	$(lt_host_flags)
+		$(lt_host_flags)
 libgomp_la_DEPENDENCIES = $(libgomp_version_dep)
 libgompd_la_DEPENDENCIES = $(libgompd_version_dep)
 libgomp_la_LINK = $(LINK) $(libgomp_la_LDFLAGS)
@@ -95,7 +95,6 @@ libgomp_la_SOURCES = alloc.c atomic.c barrier.c critical.c env.c error.c \
 	oacc-target.c ompd-support.c
 
 libgompd_la_SOURCES = ompd-init.c ompd-helper.c ompd-icv.c
-
 include $(top_srcdir)/plugin/Makefrag.am
 
 if USE_FORTRAN
