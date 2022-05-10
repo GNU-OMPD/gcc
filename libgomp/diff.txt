@@ -1,0 +1,1880 @@
+diff --git a/libgomp/Makefile.am b/libgomp/Makefile.am
+index f8b2a06d63e..2f6847e5555 100644
+--- a/libgomp/Makefile.am
++++ b/libgomp/Makefile.am
+@@ -9,7 +9,7 @@ gcc_version := $(shell @get_gcc_base_ver@ $(top_srcdir)/../gcc/BASE-VER)
+ 
+ config_path = @config_path@
+ search_path = $(addprefix $(top_srcdir)/config/, $(config_path)) $(top_srcdir) \
+-	      $(top_srcdir)/../include
++		  $(top_srcdir)/../include
+ 
+ fincludedir = $(libdir)/gcc/$(target_alias)/$(gcc_version)$(MULTISUBDIR)/finclude
+ libsubincludedir = $(libdir)/gcc/$(target_alias)/$(gcc_version)/include
+@@ -20,7 +20,7 @@ AM_CPPFLAGS = $(addprefix -I, $(search_path))
+ AM_CFLAGS = $(XCFLAGS)
+ AM_LDFLAGS = $(XLDFLAGS) $(SECTION_LDFLAGS) $(OPT_LDFLAGS)
+ 
+-toolexeclib_LTLIBRARIES = libgomp.la
++toolexeclib_LTLIBRARIES = libgomp.la libgompd.la
+ nodist_toolexeclib_HEADERS = libgomp.spec
+ 
+ if LIBGOMP_BUILD_VERSIONED_SHLIB
+@@ -32,13 +32,21 @@ libgomp.ver: $(top_srcdir)/libgomp.map
+ 	$(EGREP) -v '#(#| |$$)' $< | \
+ 	  $(PREPROCESS) -P -include config.h - > $@ || (rm -f $@ ; exit 1)
+ 
++libgompd.ver: $(top_srcdir)/libgompd.map
++	$(EGREP) -v '#(#| |$$)' $< | \
++	  $(PREPROCESS) -P -include config.h - > $@ || (rm -f $@ ; exit 1)
++
+ if LIBGOMP_BUILD_VERSIONED_SHLIB_GNU
+ libgomp_version_script = -Wl,--version-script,libgomp.ver
++libgompd_version_script = -Wl,--version-script,libgompd.ver
+ libgomp_version_dep = libgomp.ver
++libgompd_version_dep = libgompd.ver
+ endif
+ if LIBGOMP_BUILD_VERSIONED_SHLIB_SUN
+ libgomp_version_script = -Wl,-M,libgomp.ver-sun
++libgompd_version_script = -Wl,-M,libgompd.ver-sun
+ libgomp_version_dep = libgomp.ver-sun
++libgompd_version_dep = libgompd.ver-sun
+ libgomp.ver-sun : libgomp.ver \
+ 		$(top_srcdir)/../contrib/make_sunver.pl \
+ 		$(libgomp_la_OBJECTS) $(libgomp_la_LIBADD)
+@@ -46,18 +54,36 @@ libgomp.ver-sun : libgomp.ver \
+ 	  libgomp.ver \
+ 	  $(libgomp_la_OBJECTS:%.lo=.libs/%.o) \
+ 	 `echo $(libgomp_la_LIBADD) | \
+-	    sed 's,/\([^/.]*\)\.la,/.libs/\1.a,g'` \
++		sed 's,/\([^/.]*\)\.la,/.libs/\1.a,g'` \
++	 > $@ || (rm -f $@ ; exit 1)
++
++libgompd.ver-sun : libgompd.ver \
++		$(top_srcdir)/../contrib/make_sunver.pl \
++		$(libgompd_la_OBJECTS) $(libgompd_la_LIBADD)
++	perl $(top_srcdir)/../contrib/make_sunver.pl \
++	  libgompd.ver \
++	  $(libgompd_la_OBJECTS:%.lo=.libs/%.o) \
++	 `echo $(libgompd_la_LIBADD) | \
++		sed 's,/\([^/.]*\)\.la,/.libs/\1.a,g'` \
+ 	 > $@ || (rm -f $@ ; exit 1)
++
+ endif
+ else
+ libgomp_version_script =
++libgompd_version_script =
+ libgomp_version_dep =
++libgompd_version_dep =
+ endif
+ libgomp_version_info = -version-info $(libtool_VERSION)
++libgompd_version_info = -version-info $(libtool_VERSION)
+ libgomp_la_LDFLAGS = $(libgomp_version_info) $(libgomp_version_script) \
+-        $(lt_host_flags)
++		$(lt_host_flags)
++libgompd_la_LDFLAGS = $(libgompd_version_info) $(libgompd_version_script) \
++		$(lt_host_flags)
+ libgomp_la_DEPENDENCIES = $(libgomp_version_dep)
++libgompd_la_DEPENDENCIES = $(libgompd_version_dep)
+ libgomp_la_LINK = $(LINK) $(libgomp_la_LDFLAGS)
++libgompd_la_LINK = $(LINK) $(libgompd_la_LDFLAGS)
+ 
+ libgomp_la_SOURCES = alloc.c atomic.c barrier.c critical.c env.c error.c \
+ 	icv.c icv-device.c iter.c iter_ull.c loop.c loop_ull.c ordered.c \
+@@ -66,8 +92,9 @@ libgomp_la_SOURCES = alloc.c atomic.c barrier.c critical.c env.c error.c \
+ 	target.c splay-tree.c libgomp-plugin.c oacc-parallel.c oacc-host.c \
+ 	oacc-init.c oacc-mem.c oacc-async.c oacc-plugin.c oacc-cuda.c \
+ 	priority_queue.c affinity-fmt.c teams.c allocator.c oacc-profiling.c \
+-	oacc-target.c
++	oacc-target.c ompd-support.c
+ 
++libgompd_la_SOURCES = ompd-init.c ompd-helper.c ompd-icv.c
+ include $(top_srcdir)/plugin/Makefrag.am
+ 
+ if USE_FORTRAN
+@@ -75,7 +102,7 @@ libgomp_la_SOURCES += openacc.f90
+ endif
+ 
+ nodist_noinst_HEADERS = libgomp_f.h
+-nodist_libsubinclude_HEADERS = omp.h openacc.h acc_prof.h
++nodist_libsubinclude_HEADERS = omp.h openacc.h acc_prof.h omp-tools.h ompd-types.h
+ if USE_FORTRAN
+ nodist_finclude_HEADERS = omp_lib.h omp_lib.f90 omp_lib.mod omp_lib_kinds.mod \
+ 	openacc_lib.h openacc.f90 openacc.mod openacc_kinds.mod
+diff --git a/libgomp/Makefile.in b/libgomp/Makefile.in
+index 22cb2136a08..02ba5f8a9b0 100644
+--- a/libgomp/Makefile.in
++++ b/libgomp/Makefile.in
+@@ -16,7 +16,7 @@
+ 
+ # Plugins for offload execution, Makefile.am fragment.
+ #
+-# Copyright (C) 2014-2021 Free Software Foundation, Inc.
++# Copyright (C) 2014-2022 Free Software Foundation, Inc.
+ #
+ # Contributed by Mentor Embedded.
+ #
+@@ -148,7 +148,7 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
+ mkinstalldirs = $(SHELL) $(top_srcdir)/../mkinstalldirs
+ CONFIG_HEADER = config.h
+ CONFIG_CLEAN_FILES = omp.h omp_lib.h omp_lib.f90 libgomp_f.h \
+-	libgomp.spec
++	omp-tools.h ompd-types.h libgomp.spec
+ CONFIG_CLEAN_VPATH_FILES =
+ am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
+ am__vpath_adj = case $$p in \
+@@ -220,8 +220,11 @@ am_libgomp_la_OBJECTS = alloc.lo atomic.lo barrier.lo critical.lo \
+ 	oacc-parallel.lo oacc-host.lo oacc-init.lo oacc-mem.lo \
+ 	oacc-async.lo oacc-plugin.lo oacc-cuda.lo priority_queue.lo \
+ 	affinity-fmt.lo teams.lo allocator.lo oacc-profiling.lo \
+-	oacc-target.lo $(am__objects_1)
++	oacc-target.lo ompd-support.lo $(am__objects_1)
+ libgomp_la_OBJECTS = $(am_libgomp_la_OBJECTS)
++libgompd_la_LIBADD =
++am_libgompd_la_OBJECTS = ompd-init.lo ompd-helper.lo ompd-icv.lo
++libgompd_la_OBJECTS = $(am_libgompd_la_OBJECTS)
+ AM_V_P = $(am__v_P_@AM_V@)
+ am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
+ am__v_P_0 = false
+@@ -269,7 +272,8 @@ am__v_FCLD_ = $(am__v_FCLD_@AM_DEFAULT_V@)
+ am__v_FCLD_0 = @echo "  FCLD    " $@;
+ am__v_FCLD_1 = 
+ SOURCES = $(libgomp_plugin_gcn_la_SOURCES) \
+-	$(libgomp_plugin_nvptx_la_SOURCES) $(libgomp_la_SOURCES)
++	$(libgomp_plugin_nvptx_la_SOURCES) $(libgomp_la_SOURCES) \
++	$(libgompd_la_SOURCES)
+ AM_V_DVIPS = $(am__v_DVIPS_@AM_V@)
+ am__v_DVIPS_ = $(am__v_DVIPS_@AM_DEFAULT_V@)
+ am__v_DVIPS_0 = @echo "  DVIPS   " $@;
+@@ -533,7 +537,8 @@ libsubincludedir = $(libdir)/gcc/$(target_alias)/$(gcc_version)/include
+ AM_CPPFLAGS = $(addprefix -I, $(search_path))
+ AM_CFLAGS = $(XCFLAGS)
+ AM_LDFLAGS = $(XLDFLAGS) $(SECTION_LDFLAGS) $(OPT_LDFLAGS)
+-toolexeclib_LTLIBRARIES = libgomp.la $(am__append_1) $(am__append_2)
++toolexeclib_LTLIBRARIES = libgomp.la libgompd.la $(am__append_1) \
++	$(am__append_2)
+ nodist_toolexeclib_HEADERS = libgomp.spec
+ 
+ # -Wc is only a libtool option.
+@@ -542,15 +547,27 @@ nodist_toolexeclib_HEADERS = libgomp.spec
+ @LIBGOMP_BUILD_VERSIONED_SHLIB_FALSE@libgomp_version_script = 
+ @LIBGOMP_BUILD_VERSIONED_SHLIB_GNU_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@libgomp_version_script = -Wl,--version-script,libgomp.ver
+ @LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@libgomp_version_script = -Wl,-M,libgomp.ver-sun
++@LIBGOMP_BUILD_VERSIONED_SHLIB_FALSE@libgompd_version_script = 
++@LIBGOMP_BUILD_VERSIONED_SHLIB_GNU_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@libgompd_version_script = -Wl,--version-script,libgompd.ver
++@LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@libgompd_version_script = -Wl,-M,libgompd.ver-sun
+ @LIBGOMP_BUILD_VERSIONED_SHLIB_FALSE@libgomp_version_dep = 
+ @LIBGOMP_BUILD_VERSIONED_SHLIB_GNU_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@libgomp_version_dep = libgomp.ver
+ @LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@libgomp_version_dep = libgomp.ver-sun
++@LIBGOMP_BUILD_VERSIONED_SHLIB_FALSE@libgompd_version_dep = 
++@LIBGOMP_BUILD_VERSIONED_SHLIB_GNU_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@libgompd_version_dep = libgompd.ver
++@LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@libgompd_version_dep = libgompd.ver-sun
+ libgomp_version_info = -version-info $(libtool_VERSION)
++libgompd_version_info = -version-info $(libtool_VERSION)
+ libgomp_la_LDFLAGS = $(libgomp_version_info) $(libgomp_version_script) \
+-        $(lt_host_flags)
++	$(lt_host_flags)
++
++libgompd_la_LDFLAGS = $(libgompd_version_info) $(libgompd_version_script) \
++	$(lt_host_flags)
+ 
+ libgomp_la_DEPENDENCIES = $(libgomp_version_dep)
++libgompd_la_DEPENDENCIES = $(libgompd_version_dep)
+ libgomp_la_LINK = $(LINK) $(libgomp_la_LDFLAGS)
++libgompd_la_LINK = $(LINK) $(libgompd_la_LDFLAGS)
+ libgomp_la_SOURCES = alloc.c atomic.c barrier.c critical.c env.c \
+ 	error.c icv.c icv-device.c iter.c iter_ull.c loop.c loop_ull.c \
+ 	ordered.c parallel.c scope.c sections.c single.c task.c team.c \
+@@ -559,7 +576,8 @@ libgomp_la_SOURCES = alloc.c atomic.c barrier.c critical.c env.c \
+ 	oacc-parallel.c oacc-host.c oacc-init.c oacc-mem.c \
+ 	oacc-async.c oacc-plugin.c oacc-cuda.c priority_queue.c \
+ 	affinity-fmt.c teams.c allocator.c oacc-profiling.c \
+-	oacc-target.c $(am__append_3)
++	oacc-target.c ompd-support.c $(am__append_3)
++libgompd_la_SOURCES = ompd-init.c ompd-helper.c ompd-icv.c
+ 
+ # Nvidia PTX OpenACC plugin.
+ @PLUGIN_NVPTX_TRUE@libgomp_plugin_nvptx_version_info = -version-info $(libtool_VERSION)
+@@ -583,7 +601,7 @@ libgomp_la_SOURCES = alloc.c atomic.c barrier.c critical.c env.c \
+ @PLUGIN_GCN_TRUE@libgomp_plugin_gcn_la_LIBADD = libgomp.la $(PLUGIN_GCN_LIBS)
+ @PLUGIN_GCN_TRUE@libgomp_plugin_gcn_la_LIBTOOLFLAGS = --tag=disable-static
+ nodist_noinst_HEADERS = libgomp_f.h
+-nodist_libsubinclude_HEADERS = omp.h openacc.h acc_prof.h
++nodist_libsubinclude_HEADERS = omp.h openacc.h acc_prof.h omp-tools.h ompd-types.h
+ @USE_FORTRAN_TRUE@nodist_finclude_HEADERS = omp_lib.h omp_lib.f90 omp_lib.mod omp_lib_kinds.mod \
+ @USE_FORTRAN_TRUE@	openacc_lib.h openacc.f90 openacc.mod openacc_kinds.mod
+ 
+@@ -680,6 +698,10 @@ omp_lib.f90: $(top_builddir)/config.status $(srcdir)/omp_lib.f90.in
+ 	cd $(top_builddir) && $(SHELL) ./config.status $@
+ libgomp_f.h: $(top_builddir)/config.status $(srcdir)/libgomp_f.h.in
+ 	cd $(top_builddir) && $(SHELL) ./config.status $@
++omp-tools.h: $(top_builddir)/config.status $(srcdir)/omp-tools.h.in
++	cd $(top_builddir) && $(SHELL) ./config.status $@
++ompd-types.h: $(top_builddir)/config.status $(srcdir)/ompd-types.h.in
++	cd $(top_builddir) && $(SHELL) ./config.status $@
+ libgomp.spec: $(top_builddir)/config.status $(srcdir)/libgomp.spec.in
+ 	cd $(top_builddir) && $(SHELL) ./config.status $@
+ 
+@@ -727,6 +749,9 @@ libgomp-plugin-nvptx.la: $(libgomp_plugin_nvptx_la_OBJECTS) $(libgomp_plugin_nvp
+ libgomp.la: $(libgomp_la_OBJECTS) $(libgomp_la_DEPENDENCIES) $(EXTRA_libgomp_la_DEPENDENCIES) 
+ 	$(AM_V_GEN)$(libgomp_la_LINK) -rpath $(toolexeclibdir) $(libgomp_la_OBJECTS) $(libgomp_la_LIBADD) $(LIBS)
+ 
++libgompd.la: $(libgompd_la_OBJECTS) $(libgompd_la_DEPENDENCIES) $(EXTRA_libgompd_la_DEPENDENCIES) 
++	$(AM_V_GEN)$(libgompd_la_LINK) -rpath $(toolexeclibdir) $(libgompd_la_OBJECTS) $(libgompd_la_LIBADD) $(LIBS)
++
+ mostlyclean-compile:
+ 	-rm -f *.$(OBJEXT)
+ 
+@@ -764,6 +789,10 @@ distclean-compile:
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/oacc-plugin.Plo@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/oacc-profiling.Plo@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/oacc-target.Plo@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ompd-helper.Plo@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ompd-icv.Plo@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ompd-init.Plo@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ompd-support.Plo@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ordered.Plo@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/parallel.Plo@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/priority_queue.Plo@am__quote@
+@@ -1366,6 +1395,10 @@ vpath % $(strip $(search_path))
+ @LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@libgomp.ver: $(top_srcdir)/libgomp.map
+ @LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@	$(EGREP) -v '#(#| |$$)' $< | \
+ @LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@	  $(PREPROCESS) -P -include config.h - > $@ || (rm -f $@ ; exit 1)
++
++@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@libgompd.ver: $(top_srcdir)/libgompd.map
++@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@	$(EGREP) -v '#(#| |$$)' $< | \
++@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@	  $(PREPROCESS) -P -include config.h - > $@ || (rm -f $@ ; exit 1)
+ @LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@libgomp.ver-sun : libgomp.ver \
+ @LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@		$(top_srcdir)/../contrib/make_sunver.pl \
+ @LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@		$(libgomp_la_OBJECTS) $(libgomp_la_LIBADD)
+@@ -1376,6 +1409,16 @@ vpath % $(strip $(search_path))
+ @LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@	    sed 's,/\([^/.]*\)\.la,/.libs/\1.a,g'` \
+ @LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@	 > $@ || (rm -f $@ ; exit 1)
+ 
++@LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@libgompd.ver-sun : libgompd.ver \
++@LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@		$(top_srcdir)/../contrib/make_sunver.pl \
++@LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@		$(libgompd_la_OBJECTS) $(libgompd_la_LIBADD)
++@LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@	perl $(top_srcdir)/../contrib/make_sunver.pl \
++@LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@	  libgompd.ver \
++@LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@	  $(libgompd_la_OBJECTS:%.lo=.libs/%.o) \
++@LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@	 `echo $(libgompd_la_LIBADD) | \
++@LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@	    sed 's,/\([^/.]*\)\.la,/.libs/\1.a,g'` \
++@LIBGOMP_BUILD_VERSIONED_SHLIB_SUN_TRUE@@LIBGOMP_BUILD_VERSIONED_SHLIB_TRUE@	 > $@ || (rm -f $@ ; exit 1)
++
+ omp_lib_kinds.mod: omp_lib.mod
+ 	:
+ openacc_kinds.mod: openacc.mod
+diff --git a/libgomp/config/darwin/plugin-suffix.h b/libgomp/config/darwin/plugin-suffix.h
+index 7c1ad31c9b4..57f127f6d3e 100644
+--- a/libgomp/config/darwin/plugin-suffix.h
++++ b/libgomp/config/darwin/plugin-suffix.h
+@@ -23,4 +23,4 @@
+    see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
+    <http://www.gnu.org/licenses/>.  */
+ 
+-#define SONAME_SUFFIX(n) ("." #n ".dylib")
++#define SONAME_SUFFIX(n) "." #n ".dylib"
+diff --git a/libgomp/config/hpux/plugin-suffix.h b/libgomp/config/hpux/plugin-suffix.h
+index a4c48a45dd1..ceaf2c6e054 100644
+--- a/libgomp/config/hpux/plugin-suffix.h
++++ b/libgomp/config/hpux/plugin-suffix.h
+@@ -23,4 +23,4 @@
+    see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
+    <http://www.gnu.org/licenses/>.  */
+ 
+-#define SONAME_SUFFIX(n) (".sl." #n)
++#define SONAME_SUFFIX(n) ".sl." #n
+diff --git a/libgomp/config/posix/plugin-suffix.h b/libgomp/config/posix/plugin-suffix.h
+index cf03f64f7a3..995d34f53ea 100644
+--- a/libgomp/config/posix/plugin-suffix.h
++++ b/libgomp/config/posix/plugin-suffix.h
+@@ -23,4 +23,4 @@
+    see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
+    <http://www.gnu.org/licenses/>.  */
+ 
+-#define SONAME_SUFFIX(n) (".so." #n)
++#define SONAME_SUFFIX(n) ".so." #n
+diff --git a/libgomp/configure b/libgomp/configure
+index a73a6d44003..592f32974b6 100755
+--- a/libgomp/configure
++++ b/libgomp/configure
+@@ -17065,7 +17065,7 @@ fi
+ 
+ 
+ 
+-ac_config_files="$ac_config_files omp.h omp_lib.h omp_lib.f90 libgomp_f.h"
++ac_config_files="$ac_config_files omp.h omp_lib.h omp_lib.f90 libgomp_f.h omp-tools.h ompd-types.h"
+ 
+ ac_config_files="$ac_config_files Makefile testsuite/Makefile libgomp.spec"
+ 
+@@ -18218,6 +18218,8 @@ do
+     "omp_lib.h") CONFIG_FILES="$CONFIG_FILES omp_lib.h" ;;
+     "omp_lib.f90") CONFIG_FILES="$CONFIG_FILES omp_lib.f90" ;;
+     "libgomp_f.h") CONFIG_FILES="$CONFIG_FILES libgomp_f.h" ;;
++    "omp-tools.h") CONFIG_FILES="$CONFIG_FILES omp-tools.h" ;;
++    "ompd-types.h") CONFIG_FILES="$CONFIG_FILES ompd-types.h" ;;
+     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
+     "testsuite/Makefile") CONFIG_FILES="$CONFIG_FILES testsuite/Makefile" ;;
+     "libgomp.spec") CONFIG_FILES="$CONFIG_FILES libgomp.spec" ;;
+diff --git a/libgomp/configure.ac b/libgomp/configure.ac
+index a9b1f3973f7..cd6c3cc1a96 100644
+--- a/libgomp/configure.ac
++++ b/libgomp/configure.ac
+@@ -472,7 +472,7 @@ CFLAGS="$save_CFLAGS"
+ # Determine what GCC version number to use in filesystem paths.
+ GCC_BASE_VER
+ 
+-AC_CONFIG_FILES(omp.h omp_lib.h omp_lib.f90 libgomp_f.h)
++AC_CONFIG_FILES(omp.h omp_lib.h omp_lib.f90 libgomp_f.h omp-tools.h ompd-types.h)
+ AC_CONFIG_FILES(Makefile testsuite/Makefile libgomp.spec)
+ AC_CONFIG_FILES([testsuite/libgomp-test-support.pt.exp:testsuite/libgomp-test-support.exp.in])
+ AC_CONFIG_FILES([testsuite/libgomp-site-extra.exp])
+diff --git a/libgomp/env.c b/libgomp/env.c
+index 1c4ee894515..fa808931a5a 100644
+--- a/libgomp/env.c
++++ b/libgomp/env.c
+@@ -33,6 +33,7 @@
+ #ifndef LIBGOMP_OFFLOADED_ONLY
+ #include "libgomp_f.h"
+ #include "oacc-int.h"
++#include "ompd-support.h"
+ #include <ctype.h>
+ #include <stdlib.h>
+ #include <stdio.h>
+@@ -89,6 +90,7 @@ void **gomp_places_list;
+ unsigned long gomp_places_list_len;
+ uintptr_t gomp_def_allocator = omp_default_mem_alloc;
+ int gomp_debug_var;
++bool gompd_enabled;
+ unsigned int gomp_num_teams_var;
+ int gomp_nteams_var;
+ int gomp_teams_thread_limit_var;
+@@ -418,6 +420,33 @@ parse_target_offload (const char *name, enum gomp_target_offload_t *offload)
+   gomp_error ("Invalid value for environment variable OMP_TARGET_OFFLOAD");
+ }
+ 
++/* Parse OMPD_DEBUG environment variable.  */
++
++static void
++parse_debug (const char *name, bool *debug_value)
++{
++  const char *env;
++  bool ret = false;
++  env = getenv (name);
++  if (env == NULL)
++    return;
++  while (isspace ((unsigned char) *env))
++    ++env;
++  if (strncasecmp (env, "enabled", 7) == 0)
++    {
++      env += 7;
++      ret = true;
++    }
++  while (isspace ((unsigned char) *env))
++    ++env;
++  if (ret && *env == '\0')
++    {
++      *debug_value = ret;
++      return;
++    }
++  gomp_error ("Invalid value for environment variable OMP_DEBUG");
++}
++
+ /* Parse environment variable set to a boolean or list of omp_proc_bind_t
+    enum values.  Return true if one was present and it was successfully
+    parsed.  */
+@@ -1483,6 +1512,9 @@ initialize_env (void)
+ 	= thread_limit_var > INT_MAX ? UINT_MAX : thread_limit_var;
+     }
+   parse_int_secure ("GOMP_DEBUG", &gomp_debug_var, true);
++  parse_debug ("OMP_DEBUG", &gompd_enabled);
++  if (gompd_enabled)
++    gompd_load ();
+ #ifndef HAVE_SYNC_BUILTINS
+   gomp_mutex_init (&gomp_managed_threads_lock);
+ #endif
+diff --git a/libgomp/libgomp.map b/libgomp/libgomp.map
+index 2ac58094169..46feba394f5 100644
+--- a/libgomp/libgomp.map
++++ b/libgomp/libgomp.map
+@@ -13,7 +13,7 @@ OMP_1.0 {
+ #ifdef HAVE_SYMVER_SYMBOL_RENAMING_RUNTIME_SUPPORT
+         # If the assembler used lacks the .symver directive or the linker
+ 	# doesn't support GNU symbol versioning, we have the same symbol in
+-	# two versions, which Sun ld chokes on. 
++	# two versions, which Sun ld chokes on.
+ 	omp_init_lock;
+ 	omp_init_nest_lock;
+ 	omp_destroy_lock;
+@@ -226,6 +226,14 @@ OMP_5.1 {
+ 	omp_get_teams_thread_limit_;
+ } OMP_5.0.2;
+ 
++OMP_5.0.3 {
++  global:
++	ompd_dll_locations;
++	ompd_dll_locations_valid;
++	ompd_bp_parallel_begin;
++	ompd_bp_parallel_end;
++} OMP_5.0.2;
++
+ GOMP_1.0 {
+   global:
+ 	GOMP_atomic_end;
+diff --git a/libgomp/libgompd.map b/libgomp/libgompd.map
+new file mode 100644
+index 00000000000..fc1b219cdde
+--- /dev/null
++++ b/libgomp/libgompd.map
+@@ -0,0 +1,21 @@
++OMPD_5.1 {
++  global:
++    ompd_initialize;
++    ompd_get_api_version;
++    ompd_get_version_string;
++    ompd_process_initialize;
++    ompd_device_initialize;
++    ompd_rel_address_space_handle;
++    ompd_finalize;
++    ompd_enumerate_icvs;
++    ompd_get_icv_from_scope;
++    ompd_get_icv_string_from_scope;
++    ompd_get_thread_handle;
++    ompd_get_thread_in_parallel;
++    ompd_rel_thread_handle;
++    ompd_thread_handle_compare;
++    ompd_get_thread_id;
++    ompd_get_device_from_thread;
++    ompd_bp_thread_begin;
++    ompd_bp_thread_end;
++};
+diff --git a/libgomp/omp-tools.h.in b/libgomp/omp-tools.h.in
+new file mode 100644
+index 00000000000..18c0c2a0b46
+--- /dev/null
++++ b/libgomp/omp-tools.h.in
+@@ -0,0 +1,321 @@
++/* Copyright (C) 2022 Free Software Foundation, Inc.
++   Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
++   This file is part of the GNU Offloading and Multi Processing Library
++   (libgomp).
++   Libgomp is free software; you can redistribute it and/or modify it
++   under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 3, or (at your option)
++   any later version.
++   Libgomp is distributed in the hope that it will be useful, but WITHOUT ANY
++   WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
++   FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
++   more details.
++   Under Section 7 of GPL version 3, you are granted additional
++   permissions described in the GCC Runtime Library Exception, version
++   3.1, as published by the Free Software Foundation.
++   You should have received a copy of the GNU General Public License and
++   a copy of the GCC Runtime Library Exception along with this program;
++   see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
++   <http://www.gnu.org/licenses/>.  */
++
++/* This file contains data types and function declarations that
++   that are defined in OMPD standard.  */
++
++#ifndef _OMP_TOOLS_H
++#define _OMP_TOOLS_H
++
++#ifdef __cplusplus
++extern "C" {
++#define __GOMPD_NOTHROW throw ()
++#else
++#define __GOMPD_NOTHROW __attribute__((__nothrow__))
++#endif
++
++extern const char **ompd_dll_locations;
++
++#ifdef __ELF__
++#define ompd_dll_locations_valid() \
++  __asm__ __volatile__ (".globl ompd_dll_locations_valid\n\t" \
++			"ompd_dll_locations_valid:")
++#else
++extern void ompd_dll_locations_valid (void) __GOMPD_NOTHROW;
++#endif /* __ELF__ */
++
++typedef __UINT64_TYPE__ ompd_size_t;
++typedef __UINT64_TYPE__ ompd_wait_id_t;
++
++typedef __UINT64_TYPE__ ompd_addr_t;
++typedef __INT64_TYPE__ ompd_word_t;
++typedef __UINT64_TYPE__ ompd_seg_t;
++
++typedef struct ompd_address_t
++{
++  ompd_seg_t segment;
++  ompd_addr_t address;
++} ompd_address_t;
++
++typedef struct ompd_frame_info_t
++{
++  ompd_address_t frame_address;
++  ompd_word_t frame_flag;
++} ompd_frame_info_t;
++
++typedef __UINT64_TYPE__ ompd_device_t;
++typedef __UINT64_TYPE__ ompd_thread_id_t;
++
++typedef struct _ompd_aspace_handle ompd_address_space_handle_t;
++typedef struct _ompd_thread_handle ompd_thread_handle_t;
++typedef struct _ompd_parallel_handle ompd_parallel_handle_t;
++typedef struct _ompd_task_handle ompd_task_handle_t;
++
++typedef enum ompd_scope_t
++{
++  ompd_scope_global = 1,
++  ompd_scope_address_space = 2,
++  ompd_scope_thread = 3,
++  ompd_scope_parallel = 4,
++  ompd_scope_implicit_task = 5,
++  ompd_scope_task = 6
++} ompd_scope_t;
++
++typedef __UINT64_TYPE__ ompd_icv_id_t;
++
++typedef struct _ompd_aspace_cont ompd_address_space_context_t;
++typedef struct _ompd_thread_cont ompd_thread_context_t;
++
++typedef enum ompd_rc_t
++{
++  ompd_rc_ok = 0,
++  ompd_rc_unavailable = 1,
++  ompd_rc_stale_handle = 2,
++  ompd_rc_bad_input = 3,
++  ompd_rc_error = 4,
++  ompd_rc_unsupported = 5,
++  ompd_rc_needs_state_tracking = 6,
++  ompd_rc_incompatible = 7,
++  ompd_rc_device_read_error = 8,
++  ompd_rc_device_write_error = 9,
++  ompd_rc_nomem = 10,
++  ompd_rc_incomplete = 11,
++  ompd_rc_callback_error = 12
++} ompd_rc_t;
++
++
++typedef struct ompd_device_type_sizes_t
++{
++  __UINT8_TYPE__ sizeof_char;
++  __UINT8_TYPE__ sizeof_short;
++  __UINT8_TYPE__ sizeof_int;
++  __UINT8_TYPE__ sizeof_long;
++  __UINT8_TYPE__ sizeof_long_long;
++  __UINT8_TYPE__ sizeof_pointer;
++} ompd_device_type_sizes_t;
++
++
++typedef ompd_rc_t (*ompd_callback_memory_alloc_fn_t) (ompd_size_t,
++						      void **);
++typedef ompd_rc_t (*ompd_callback_memory_free_fn_t) (void *);
++
++typedef ompd_rc_t (*ompd_callback_get_thread_context_for_thread_id_fn_t)
++  (ompd_address_space_context_t *, ompd_thread_id_t,
++   ompd_size_t, const void *, ompd_thread_context_t **);
++
++
++typedef ompd_rc_t (*ompd_callback_sizeof_fn_t) (ompd_address_space_context_t *,
++						ompd_device_type_sizes_t *);
++
++
++typedef ompd_rc_t (*ompd_callback_symbol_addr_fn_t)
++  (ompd_address_space_context_t *, ompd_thread_context_t *, const char *,
++   ompd_address_t *, const char *);
++
++typedef ompd_rc_t (*ompd_callback_memory_read_fn_t)
++  (ompd_address_space_context_t *, ompd_thread_context_t *,
++   const ompd_address_t *, ompd_size_t nbytes, void *);
++
++
++typedef ompd_rc_t (*ompd_callback_memory_write_fn_t)
++  (ompd_address_space_context_t *, ompd_thread_context_t *,
++   const ompd_address_t *, ompd_size_t, const void *);
++
++typedef ompd_rc_t (*ompd_callback_device_host_fn_t)
++  (ompd_address_space_context_t *, const void *,
++   ompd_size_t, ompd_size_t, void *);
++
++typedef ompd_rc_t (*ompd_callback_print_string_fn_t) (const char *, int);
++
++typedef struct ompd_callbacks_t
++{
++  ompd_callback_memory_alloc_fn_t alloc_memory;
++  ompd_callback_memory_free_fn_t free_memory;
++  ompd_callback_print_string_fn_t print_string;
++  ompd_callback_sizeof_fn_t sizeof_type;
++  ompd_callback_symbol_addr_fn_t symbol_addr_lookup;
++  ompd_callback_memory_read_fn_t read_memory;
++  ompd_callback_memory_write_fn_t write_memory;
++  ompd_callback_memory_read_fn_t read_string;
++  ompd_callback_device_host_fn_t device_to_host;
++  ompd_callback_device_host_fn_t host_to_device;
++  ompd_callback_get_thread_context_for_thread_id_fn_t
++    get_thread_context_for_thread_id;
++} ompd_callbacks_t;
++
++ompd_rc_t ompd_initialize (ompd_word_t, const ompd_callbacks_t *)
++			   __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_get_api_version (ompd_word_t *) __GOMPD_NOTHROW;
++ompd_rc_t ompd_get_version_string (const char **) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_finalize (void) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_process_initialize (ompd_address_space_context_t *,
++				   ompd_address_space_handle_t **)
++				   __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_device_initialize (ompd_address_space_handle_t *,
++				  ompd_address_space_context_t *, ompd_device_t,
++				  ompd_size_t, void *,
++				  ompd_address_space_handle_t **)
++				  __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_rel_address_space_handle (ompd_address_space_handle_t *)
++					 __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_get_omp_version (ompd_address_space_handle_t *,
++				ompd_word_t *) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_get_omp_version_string (ompd_address_space_handle_t *,
++				       const char **) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_get_thread_in_parallel (ompd_parallel_handle_t *, int,
++				       ompd_thread_handle_t **) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_get_thread_handle (ompd_address_space_handle_t *,
++				  ompd_thread_id_t, ompd_size_t,const void *,
++				  ompd_thread_handle_t **) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_rel_thread_handle (ompd_thread_handle_t *) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_thread_handle_compare (ompd_thread_handle_t *,
++				      ompd_thread_handle_t *,
++				      int *) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_get_thread_id (ompd_thread_handle_t *, ompd_thread_id_t,
++			      ompd_size_t, void *) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_get_curr_parallel_handle (ompd_thread_handle_t *,
++					 ompd_parallel_handle_t **)
++					 __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_get_enclosing_parallel_handle (ompd_parallel_handle_t *,
++					      ompd_parallel_handle_t **)
++					      __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_get_task_parallel_handle (ompd_task_handle_t *,
++					 ompd_parallel_handle_t **)
++					 __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_rel_parallel_handle (ompd_parallel_handle_t *) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_parallel_handle_compare (ompd_parallel_handle_t *,
++					ompd_parallel_handle_t *,
++					int *) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_get_curr_task_handle (ompd_thread_handle_t *,
++				     ompd_task_handle_t **) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_get_generating_task_handle (ompd_task_handle_t *,
++					   ompd_task_handle_t **)
++					   __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_get_scheduling_task_handle (ompd_task_handle_t *,
++					   ompd_task_handle_t **)
++					   __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_get_task_in_parallel (ompd_parallel_handle_t *, int,
++				     ompd_task_handle_t **) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_rel_task_handle (ompd_task_handle_t *) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_task_handle_compare (ompd_task_handle_t *, ompd_task_handle_t *,
++				    int *) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_get_task_function (ompd_task_handle_t *,
++				  ompd_address_t *) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_get_task_frame (ompd_task_handle_t *, ompd_frame_info_t *,
++			       ompd_frame_info_t *) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_enumerate_states (ompd_address_space_handle_t *, ompd_word_t,
++				 ompd_word_t *, const char **,
++				 ompd_word_t *) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_get_state (ompd_thread_handle_t *, ompd_word_t *,
++			  ompd_wait_id_t *) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_get_display_control_vars (ompd_address_space_handle_t *,
++					 const char * const **) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_rel_display_control_vars (const char * const **) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_enumerate_icvs (ompd_address_space_handle_t *, ompd_icv_id_t,
++			       ompd_icv_id_t *, const char **, ompd_scope_t *,
++			       int *) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_get_icv_from_scope (void *, ompd_scope_t, ompd_icv_id_t,
++				   ompd_word_t *) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_get_icv_string_from_scope (void *, ompd_scope_t, ompd_icv_id_t,
++					  const char **) __GOMPD_NOTHROW;
++
++ompd_rc_t ompd_get_tool_data (void *, ompd_scope_t, ompd_word_t *,
++			      ompd_address_t *) __GOMPD_NOTHROW;
++
++#ifdef __ELF__
++#define ompd_bp_parallel_begin() \
++  __asm__ __volatile__ (".globl ompd_bp_parallel_begin\n\t" \
++			"ompd_bp_parallel_begin:")
++#define ompd_bp_parallel_end() \
++  __asm__ __volatile__ (".globl ompd_bp_parallel_end\n\t" \
++			"ompd_bp_parallel_end:")
++#define ompd_bp_task_begin() \
++  __asm__ __volatile__ (".globl ompd_bp_task_begin\n\t" \
++			"ompd_bp_task_begin:")
++#define ompd_bp_task_end() \
++  __asm__ __volatile__ (".globl ompd_bp_task_end\n\t" \
++			"ompd_bp_task_end:")
++#define ompd_bp_thread_begin() \
++  __asm__ __volatile__ (".globl ompd_bp_thread_begin\n\t" \
++			"ompd_bp_thread_begin:")
++#define ompd_bp_thread_end() \
++  __asm__ __volatile__ (".globl ompd_bp_thread_end\n\t" \
++			"ompd_bp_thread_end:")
++#define ompd_bp_device_begin() \
++  __asm__ __volatile__ (".globl ompd_bp_device_begin\n\t" \
++			"ompd_bp_device_end:")
++#define ompd_bp_device_end() \
++  __asm__ __volatile__ (".globl ompd_bp_device_end\n\t" \
++			"ompd_bp_device_end:")
++#else
++
++extern void ompd_bp_parallel_begin (void) __GOMPD_NOTHROW;
++extern void ompd_bp_parallel_end (void) __GOMPD_NOTHROW;
++
++extern void ompd_bp_task_begin (void) __GOMPD_NOTHROW;
++extern void ompd_bp_task_end (void) __GOMPD_NOTHROW;
++
++extern void ompd_bp_thread_begin (void) __GOMPD_NOTHROW;
++extern void ompd_bp_thread_end (void) __GOMPD_NOTHROW;
++
++extern void ompd_bp_device_begin (void) __GOMPD_NOTHROW;
++extern void ompd_bp_device_end (void) __GOMPD_NOTHROW;
++#endif /* __ELF__ */
++
++#define ompd_segment_none  ((ompd_seg_t) 0)
++#define ompd_icv_undefined ((ompd_icv_id_t) 0)
++
++#ifdef __cplusplus
++}; // extern "C"
++#endif
++
++#endif /* _OMP_TOOLS_H */
+diff --git a/libgomp/ompd-helper.c b/libgomp/ompd-helper.c
+new file mode 100644
+index 00000000000..ced54d18689
+--- /dev/null
++++ b/libgomp/ompd-helper.c
+@@ -0,0 +1,252 @@
++/* Copyright (C) 2022 Free Software Foundation, Inc.
++   Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
++   This file is part of the GNU Offloading and Multi Processing Library
++   (libgomp).
++   Libgomp is free software; you can redistribute it and/or modify it
++   under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 3, or (at your option)
++   any later version.
++   Libgomp is distributed in the hope that it will be useful, but WITHOUT ANY
++   WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
++   FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
++   more details.
++   Under Section 7 of GPL version 3, you are granted additional
++   permissions described in the GCC Runtime Library Exception, version
++   3.1, as published by the Free Software Foundation.
++   You should have received a copy of the GNU General Public License and
++   a copy of the GCC Runtime Library Exception along with this program;
++   see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
++   <http://www.gnu.org/licenses/>.  */
++
++/* This file contains the source code of functions
++   declared in ompd-helper.h.  */
++
++#include "ompd-helper.h"
++
++ompd_device_type_sizes_t target_sizes;
++
++/* Get global ICVs.  */
++ompd_rc_t
++gompd_get_cancellation (ompd_address_space_handle_t *ah,
++			ompd_word_t *cancel_var)
++{
++  CHECK (ah);
++  ompd_word_t cancel = 0;
++  ompd_rc_t ret;
++  ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
++  GET_VALUE (ah->context, NULL, "gomp_cancel_var", cancel, cancel,
++	     target_sizes.sizeof_char, 1, ret, symbol_addr);
++  *cancel_var = cancel;
++  return ret;
++}
++
++ompd_rc_t
++gompd_get_max_task_priority (ompd_address_space_handle_t *ah,
++			     ompd_word_t *task_p)
++{
++  CHECK (ah);
++  ompd_word_t task_priority = 0;
++  ompd_rc_t ret;
++  ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
++  GET_VALUE (ah->context, NULL, "gomp_max_task_priority_var", task_priority,
++	     task_priority, target_sizes.sizeof_int, 1, ret, symbol_addr);
++  *task_p = task_priority;
++  return ret;
++}
++
++ompd_rc_t
++gompd_get_stacksize (ompd_address_space_handle_t *ah, ompd_word_t *stacksize)
++{
++  CHECK (ah);
++  ompd_word_t stack_var = 0;
++  ompd_rc_t ret;
++  ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
++  GET_VALUE (ah->context, NULL, "stacksize", stack_var, stack_var,
++	     target_sizes.sizeof_long, 1, ret, symbol_addr);
++  *stacksize = stack_var;
++  return ret;
++}
++
++ompd_rc_t
++gompd_get_debug (ompd_address_space_handle_t *ah, ompd_word_t *debug_var)
++{
++  CHECK (ah);
++  ompd_word_t debug = 0;
++  ompd_rc_t ret;
++  ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
++  GET_VALUE (ah->context, NULL, "gomp_debug_var", debug, debug,
++	     target_sizes.sizeof_int, 1, ret, symbol_addr);
++  *debug_var = debug;
++  return ret;
++}
++
++ompd_rc_t
++gompd_get_display_affinity (ompd_address_space_handle_t *ah, ompd_word_t *aff)
++{
++  CHECK (ah);
++  ompd_word_t affin = 0;
++  ompd_rc_t ret;
++  ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
++  GET_VALUE (ah->context, NULL, "gomp_display_affinity_var", affin, affin,
++	     target_sizes.sizeof_char, 1, ret, symbol_addr);
++  *aff = affin;
++  return ret;
++}
++
++ompd_rc_t
++gompd_get_affinity_format_len (ompd_address_space_handle_t *ah,
++			       ompd_word_t *len)
++{
++  CHECK (ah);
++  ompd_word_t len_var = 0;
++  ompd_rc_t ret;
++  ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
++  GET_VALUE (ah->context, NULL, "gomp_affinity_format_len", len_var, len_var,
++	     target_sizes.sizeof_int, 1, ret, symbol_addr);
++  *len = len_var;
++  return ret;
++}
++
++ompd_rc_t
++gompd_get_affinity_format (ompd_address_space_handle_t *ah, const char **string)
++{
++  CHECK (ah);
++  ompd_word_t len = 100;
++  ompd_rc_t ret;
++  char *temp_str;
++  ompd_word_t addr;
++  ret = callbacks->alloc_memory (len + 1, (void **) &temp_str);
++  temp_str[len] = '\0';
++  ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
++  ret = callbacks->symbol_addr_lookup (ah->context, NULL,
++				       "gomp_affinity_format_var", &symbol_addr,
++				       NULL);
++  CHECK_RET (ret);
++  ret = callbacks->read_memory (ah->context, NULL, &symbol_addr,
++				target_sizes.sizeof_pointer, &addr);
++  CHECK_RET (ret);
++  symbol_addr.address = addr;
++  ret = callbacks->read_string (ah->context, NULL, &symbol_addr, len,
++				(void *) temp_str);
++  CHECK_RET (ret);
++  ret = callbacks->device_to_host (ah->context, &temp_str,
++				   target_sizes.sizeof_char, len, &temp_str);
++  *string = temp_str;
++  return ret;
++}
++
++ompd_rc_t
++gompd_get_wait_policy (ompd_address_space_handle_t *ah,
++		       ompd_word_t *wait_policy)
++{
++  CHECK (ah);
++  ompd_word_t wait_p = 0;
++  ompd_rc_t ret;
++  ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
++  GET_VALUE (ah->context, NULL, "wait_policy", wait_p, wait_p,
++	     target_sizes.sizeof_int, 1, ret, symbol_addr);
++  *wait_policy = wait_p;
++  return ret;
++}
++
++ompd_rc_t
++gompd_get_num_teams (ompd_address_space_handle_t *ah, ompd_word_t *num_teams)
++{
++  CHECK (ah);
++  ompd_word_t num_t = 0;
++  ompd_rc_t ret;
++  ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
++  GET_VALUE (ah->context, NULL, "gomp_num_teams_var", num_t, num_t,
++	     target_sizes.sizeof_int, 1, ret, symbol_addr);
++  *num_teams = num_t;
++  return ret;
++}
++
++ompd_rc_t
++gompd_get_teams_thread_limit (ompd_address_space_handle_t *ah,
++			      ompd_word_t *thread_limit)
++{
++  CHECK (ah);
++  ompd_word_t thr_lim = 0;
++  ompd_rc_t ret;
++  ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
++  GET_VALUE (ah->context, NULL, "gomp_teams_thread_limit_var", thr_lim, thr_lim,
++	     target_sizes.sizeof_int, 1, ret, symbol_addr);
++  *thread_limit = thr_lim;
++  return ret;
++}
++
++ompd_rc_t
++gompd_get_spin_count (ompd_address_space_handle_t *ah, ompd_word_t *spin_count)
++{
++  CHECK (ah);
++  ompd_word_t spins = 0;
++  ompd_rc_t ret;
++  ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
++  GET_VALUE (ah->context, NULL, "gomp_spin_count_var", spins, spins,
++	     target_sizes.sizeof_long_long, 1, ret, symbol_addr);
++  *spin_count = spins;
++  return ret;
++}
++
++ompd_rc_t
++gompd_get_available_cpus (ompd_address_space_handle_t *ah, ompd_word_t *procs)
++{
++  CHECK (ah);
++  ompd_word_t cpus = 0;
++  ompd_rc_t ret;
++  ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
++  GET_VALUE (ah->context, NULL, "gomp_available_cpus", cpus, cpus,
++	     target_sizes.sizeof_long, 1, ret, symbol_addr);
++  *procs = cpus;
++  return ret;
++}
++
++ompd_rc_t
++gompd_get_throttled_spin_count (ompd_address_space_handle_t *ah,
++				ompd_word_t *throt)
++{
++  CHECK (ah);
++  ompd_word_t temp = 0;
++  ompd_rc_t ret;
++  ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
++  GET_VALUE (ah->context, NULL, "gomp_throttled_spin_count_var", temp, temp,
++	     target_sizes.sizeof_long_long, 1, ret, symbol_addr);
++  *throt = temp;
++  return ret;
++}
++
++ompd_rc_t
++gompd_get_managed_threads (ompd_address_space_handle_t *ah, ompd_word_t *man_th)
++{
++  CHECK (ah);
++  ompd_word_t temp = 0;
++  ompd_rc_t ret;
++  ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
++  GET_VALUE (ah->context, NULL, "gomp_managed_threads", temp, temp,
++	     target_sizes.sizeof_long, 1, ret, symbol_addr);
++  *man_th = temp;
++  return ret;
++}
++
++/* End of global ICVs functions.  */
++
++ompd_rc_t
++get_sizes (ompd_address_space_context_t *context)
++{
++  if (context == NULL)
++    return ompd_rc_bad_input;
++
++  static bool inited = false;
++  static ompd_rc_t ret;
++
++  if (inited)
++    return ret;
++
++  ret = callbacks->sizeof_type (context, &target_sizes);
++  if (ret != ompd_rc_ok)
++    return ret;
++
++  inited = true;
++  return ret;
++}
+diff --git a/libgomp/ompd-helper.h b/libgomp/ompd-helper.h
+new file mode 100644
+index 00000000000..06a1e06f07a
+--- /dev/null
++++ b/libgomp/ompd-helper.h
+@@ -0,0 +1,199 @@
++/* Copyright (C) 2022 Free Software Foundation, Inc.
++   Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
++   This file is part of the GNU Offloading and Multi Processing Library
++   (libgomp).
++   Libgomp is free software; you can redistribute it and/or modify it
++   under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 3, or (at your option)
++   any later version.
++   Libgomp is distributed in the hope that it will be useful, but WITHOUT ANY
++   WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
++   FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
++   more details.
++   Under Section 7 of GPL version 3, you are granted additional
++   permissions described in the GCC Runtime Library Exception, version
++   3.1, as published by the Free Software Foundation.
++   You should have received a copy of the GNU General Public License and
++   a copy of the GCC Runtime Library Exception along with this program;
++   see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
++   <http://www.gnu.org/licenses/>.  */
++
++/* This file contains data types and declarations of functions that are not
++   provided by the book but we find them necessary.  */
++
++#ifndef _OMPD_HELPER_H
++#define _OMPD_HELPER_H
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++#include "omp-tools.h"
++#include "ompd-types.h"
++#include "config.h"
++#include <assert.h>
++#include <stdio.h>
++#include <stddef.h>
++#include <string.h>
++#include <stdbool.h>
++
++#define stringize(x) stringize1(x)
++#define stringize1(x) #x
++
++#define OMPD_VERSION 202011
++
++extern const ompd_callbacks_t *callbacks;
++extern __UINT64_TYPE__ gompd_state;
++extern ompd_device_type_sizes_t target_sizes;
++
++typedef struct _ompd_aspace_handle
++{
++  ompd_address_space_context_t *context;
++  ompd_device_t kind;
++} ompd_address_space_handle_t;
++
++typedef struct _ompd_thread_handle
++{
++  ompd_address_space_handle_t *ah;
++  ompd_thread_context_t *thread_context;
++  ompd_address_t th;
++} ompd_thread_handle_t;
++
++typedef struct _ompd_parallel_handle
++{
++  ompd_address_space_handle_t *ah;
++  ompd_address_t th;
++} ompd_parallel_handle_t;
++
++typedef struct _ompd_task_handle
++{
++  ompd_address_space_handle_t *ah;
++  ompd_address_t th;
++} ompd_task_handle_t;
++
++#define CHECK_RET(ret) \
++ do { \
++   if (ret != ompd_rc_ok) \
++     return ret; \
++ } while (0)
++
++#define GET_VALUE(context, thread_context, name, output, dist_buf, size, \
++  count, ret, symbol_addr) \
++  do { \
++    ret = callbacks->symbol_addr_lookup (context, thread_context, name, \
++					 &symbol_addr, NULL); \
++    CHECK_RET (ret); \
++    ret = callbacks->read_memory (context, thread_context, &symbol_addr, size, \
++				  &dist_buf); \
++    CHECK_RET (ret); \
++    ret = callbacks->device_to_host (context, &dist_buf, size, count, &output);\
++    CHECK_RET (ret); \
++  } while (0)
++
++#define CHECK(ah) \
++  do {   \
++    if (ah == NULL || ah->context == NULL) \
++      return ompd_rc_stale_handle; \
++    if (callbacks == NULL) \
++      return ompd_rc_callback_error; \
++  } while (0)
++
++/* (var_name, string_name, scope).  */
++#define FOREACH_OMPD_ICV(ompd_icv) \
++  ompd_icv (nthreads_var, "nthread var", ompd_scope_thread) \
++  ompd_icv (thread_limit_var, "thread limit var", ompd_scope_task) \
++  ompd_icv (run_sched_var, "run sched limit var", ompd_scope_task) \
++  ompd_icv (run_sched_chunk_size, "run sched chunk size var", ompd_scope_task) \
++  ompd_icv (default_device_var, "default device var", ompd_scope_thread) \
++  ompd_icv (dyn_var, "dynamic var", ompd_scope_thread) \
++  ompd_icv (max_active_levels_var, "max active level var", ompd_scope_task) \
++  ompd_icv (bind_var, "proc bind var", ompd_scope_task) \
++  ompd_icv (cancellation_var, "cancel var", ompd_scope_address_space) \
++  ompd_icv (max_task_priority_var, "max task priority var", \
++	    ompd_scope_address_space) \
++  ompd_icv (stacksize_var, "stack size var", ompd_scope_address_space) \
++  ompd_icv (debug_var, "debug var", ompd_scope_address_space) \
++  ompd_icv (display_affinity_var, "display affinity var", \
++	    ompd_scope_address_space) \
++  ompd_icv (affinity_format_var, "affinity format var", \
++	    ompd_scope_address_space) \
++  ompd_icv (affinity_format_len_var, "affinity format len var", \
++	    ompd_scope_address_space) \
++  ompd_icv (wait_policy_var, "wait policy var", ompd_scope_address_space) \
++  ompd_icv (num_teams_var, "num teams var", ompd_scope_address_space) \
++  ompd_icv (teams_thread_limit_var, "teams thread limit var", \
++	    ompd_scope_address_space) \
++  ompd_icv (spin_count_var, "spin count var", ompd_scope_address_space) \
++  ompd_icv (num_proc_var, "num proc var", ompd_scope_address_space) \
++  ompd_icv (throttled_spin_count_var, "throttled spin count var", \
++	    ompd_scope_address_space) \
++  ompd_icv (managed_threads_var, "managed threads var", \
++	    ompd_scope_address_space) \
++  ompd_icv (thread_num_var, "thread num var", ompd_scope_thread) \
++  ompd_icv (final_task_var, "final task var", ompd_scope_task) \
++  ompd_icv (implicit_task_var, "implicit task var", ompd_scope_task) \
++  ompd_icv (team_size_var, "team size var", ompd_scope_parallel)
++
++enum ompd_icv
++{
++  gompd_icv_undefined_var = 0,
++  #define gompd_icv_iterator(var_name, string_name, scope) gompd_icv_##var_name,
++    FOREACH_OMPD_ICV (gompd_icv_iterator)
++  #undef gompd_icv_iterator
++  gompd_last_icv_var
++};
++
++#ifdef HAVE_ATTRIBUTE_VISIBILITY
++#pragma GCC visibility push(hidden)
++#endif
++
++ompd_rc_t get_sizes (ompd_address_space_context_t *);
++
++/* Get Local internal control variables.  */
++ompd_rc_t gompd_get_nthread (ompd_thread_handle_t *, ompd_word_t *);
++ompd_rc_t gompd_get_thread_limit (ompd_task_handle_t *, ompd_word_t *);
++ompd_rc_t gompd_get_run_sched (ompd_task_handle_t *,  ompd_word_t *);
++ompd_rc_t gompd_get_run_sched_chunk_size (ompd_task_handle_t *, ompd_word_t *);
++ompd_rc_t gompd_get_default_device (ompd_thread_handle_t *, ompd_word_t *);
++ompd_rc_t gompd_get_dynamic (ompd_thread_handle_t *, ompd_word_t *);
++ompd_rc_t gompd_get_max_active_levels (ompd_task_handle_t *, ompd_word_t *);
++ompd_rc_t gompd_get_proc_bind (ompd_task_handle_t *, ompd_word_t *);
++ompd_rc_t gompd_is_final (ompd_task_handle_t *, ompd_word_t *);
++ompd_rc_t gompd_is_implicit (ompd_task_handle_t *, ompd_word_t *);
++ompd_rc_t gompd_get_team_size (ompd_parallel_handle_t *, ompd_word_t *);
++
++/* Get Global ICVs.  */
++ompd_rc_t gompd_get_cancellation (ompd_address_space_handle_t *, ompd_word_t *);
++ompd_rc_t gompd_get_max_task_priority (ompd_address_space_handle_t *,
++  				       ompd_word_t *);
++ompd_rc_t gompd_get_stacksize (ompd_address_space_handle_t *, ompd_word_t *);
++ompd_rc_t gompd_get_debug (ompd_address_space_handle_t *, ompd_word_t *);
++ompd_rc_t gompd_get_display_affinity (ompd_address_space_handle_t *,
++				      ompd_word_t *);
++ompd_rc_t gompd_get_affinity_format (ompd_address_space_handle_t *,
++				     const char **);
++ompd_rc_t gompd_get_affinity_format_len (ompd_address_space_handle_t *,
++					 ompd_word_t *);
++ompd_rc_t gompd_get_wait_policy (ompd_address_space_handle_t *, ompd_word_t *);
++ompd_rc_t gompd_get_num_teams (ompd_address_space_handle_t *, ompd_word_t *);
++ompd_rc_t gompd_get_teams_thread_limit (ompd_address_space_handle_t *,
++					ompd_word_t *);
++ompd_rc_t gompd_get_spin_count (ompd_address_space_handle_t *, ompd_word_t *);
++ompd_rc_t gompd_get_available_cpus (ompd_address_space_handle_t *,
++				    ompd_word_t *);
++ompd_rc_t gompd_get_throttled_spin_count (ompd_address_space_handle_t *,
++					  ompd_word_t *);
++ompd_rc_t gompd_get_managed_threads (ompd_address_space_handle_t *,
++				     ompd_word_t *);
++/*End of Global ICVs.  */
++
++
++#ifdef HAVE_ATTRIBUTE_VISIBILITY
++#pragma GCC visibility pop
++#endif
++
++#ifdef __cplusplus
++} // extern C
++#endif
++
++#endif /* _OMPD_HELPER_H */
+diff --git a/libgomp/ompd-icv.c b/libgomp/ompd-icv.c
+new file mode 100644
+index 00000000000..ea533344425
+--- /dev/null
++++ b/libgomp/ompd-icv.c
+@@ -0,0 +1,201 @@
++/* Copyright (C) 2022 Free Software Foundation, Inc.
++   Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
++   This file is part of the GNU Offloading and Multi Processing Library
++   (libgomp).
++   Libgomp is free software; you can redistribute it and/or modify it
++   under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 3, or (at your option)
++   any later version.
++   Libgomp is distributed in the hope that it will be useful, but WITHOUT ANY
++   WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
++   FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
++   more details.
++   Under Section 7 of GPL version 3, you are granted additional
++   permissions described in the GCC Runtime Library Exception, version
++   3.1, as published by the Free Software Foundation.
++   You should have received a copy of the GNU General Public License and
++   a copy of the GCC Runtime Library Exception along with this program;
++   see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
++   <http://www.gnu.org/licenses/>.  */
++
++/* This file contains implementation of functions defined in 5.5.8 and 5.5.9
++  in OpenMP Application Programming Interface v5.1.  */
++
++#include "ompd-helper.h"
++
++static const char *gompd_icv_string[] = { "undefined",
++  #define gompd_icv_iterator(var_name, string_name, scope) string_name,
++    FOREACH_OMPD_ICV (gompd_icv_iterator)
++  #undef gompd_icv_iterator
++};
++
++static const ompd_scope_t gompd_icv_scope[] = {ompd_scope_global,
++  #define gompd_icv_iterator(var_name, string_name, scope) scope,
++    FOREACH_OMPD_ICV (gompd_icv_iterator)
++  #undef gompd_icv_iterator
++};
++
++ompd_rc_t
++ompd_enumerate_icvs (ompd_address_space_handle_t *ah,
++		     ompd_icv_id_t current, ompd_icv_id_t *next_id,
++		     const char **next_icv_name,
++		     ompd_scope_t *next_scope, int *more)
++{
++  if (ah == NULL)
++    return ompd_rc_stale_handle;
++  if (current + 1 >= gompd_last_icv_var
++      || next_id == NULL
++      || next_icv_name == NULL
++      || next_scope == NULL
++      || more == NULL)
++	return ompd_rc_bad_input;
++  if (callbacks == NULL)
++    return ompd_rc_callback_error;
++  *next_id = current + 1;
++  char *temp_name = NULL;
++  ompd_rc_t ret
++    = callbacks->alloc_memory (strlen (gompd_icv_string[*next_id]) + 1,
++			       (void **) &temp_name);
++  CHECK_RET (ret);
++  strcpy (temp_name, gompd_icv_string[*next_id]);
++  *next_icv_name = temp_name;
++  *next_scope = gompd_icv_scope[*next_id];
++  if ((*next_id) + 1 < gompd_last_icv_var)
++    *more = 1;
++  else
++    *more = 0;
++  return ompd_rc_ok;
++}
++
++ompd_rc_t
++ompd_get_icv_from_scope (void *handle, ompd_scope_t scope, ompd_icv_id_t icv_id,
++			 ompd_word_t *icv_value)
++{
++  if (handle == NULL)
++    return ompd_rc_stale_handle;
++  if (icv_value == NULL || !icv_id || icv_id >= gompd_last_icv_var)
++    return ompd_rc_bad_input;
++  if (callbacks == NULL)
++    return ompd_rc_callback_error;
++  ompd_device_t device;
++  switch (scope)
++    {
++      case ompd_scope_address_space:
++	device = ((ompd_address_space_handle_t *) handle)->kind;
++	break;
++      case ompd_scope_thread:
++	device = ((ompd_thread_handle_t *) handle)->ah->kind;
++	break;
++      case ompd_scope_parallel:
++	device = ((ompd_parallel_handle_t *) handle)->ah->kind;
++	break;
++      case ompd_scope_task:
++	device = ((ompd_task_handle_t *) handle)->ah->kind;
++	break;
++      default:
++	return ompd_rc_bad_input;
++    }
++  /* NO cuda for now.  */
++  if (device == OMPD_DEVICE_KIND_HOST)
++    {
++      switch (icv_id)
++	{
++	  case gompd_icv_cancellation_var:
++	    return
++	      gompd_get_cancellation ((ompd_address_space_handle_t *) handle,
++				      icv_value);
++	  case gompd_icv_max_task_priority_var:
++	    return gompd_get_max_task_priority ((ompd_address_space_handle_t *)
++						handle, icv_value);
++	  case gompd_icv_stacksize_var:
++	    return gompd_get_stacksize ((ompd_address_space_handle_t *) handle,
++					icv_value);
++	  case gompd_icv_debug_var:
++	    return gompd_get_debug ((ompd_address_space_handle_t *) handle,
++				    icv_value);
++	  case gompd_icv_display_affinity_var:
++	    return
++	      gompd_get_display_affinity ((ompd_address_space_handle_t *)
++					  handle, icv_value);
++	  case gompd_icv_affinity_format_var:
++	    return ompd_rc_incompatible;
++	  case gompd_icv_affinity_format_len_var:
++	    return gompd_get_affinity_format_len
++		    ((ompd_address_space_handle_t *) handle, icv_value);
++	   case gompd_icv_wait_policy_var:
++	     return
++	       gompd_get_wait_policy ((ompd_address_space_handle_t *)handle,
++				      icv_value);
++	   case gompd_icv_num_teams_var:
++	     return gompd_get_num_teams ((ompd_address_space_handle_t *)handle,
++					 icv_value);
++	   case gompd_icv_teams_thread_limit_var:
++	     return
++	       gompd_get_teams_thread_limit ((ompd_address_space_handle_t *)
++					     handle, icv_value);
++	   case gompd_icv_spin_count_var:
++	     return
++	       gompd_get_spin_count ((ompd_address_space_handle_t *) handle,
++				     icv_value);
++	   case gompd_icv_num_proc_var:
++	     return
++	       gompd_get_available_cpus ((ompd_address_space_handle_t *) handle,
++					 icv_value);
++	   case gompd_icv_throttled_spin_count_var:
++	     return
++	       gompd_get_throttled_spin_count ((ompd_address_space_handle_t *)
++					       handle, icv_value);
++	   case gompd_icv_managed_threads_var:
++	     return
++	       gompd_get_managed_threads ((ompd_address_space_handle_t *)
++					  handle, icv_value);
++	  default:
++	    return ompd_rc_unsupported;
++	 }
++    }
++    return ompd_rc_error;
++}
++
++ompd_rc_t
++ompd_get_icv_string_from_scope (void *handle, ompd_scope_t scope,
++				ompd_icv_id_t icv_id, const char **icv_value)
++{
++  if (handle == NULL)
++    return ompd_rc_stale_handle;
++  if (icv_value == NULL || !icv_id || icv_id >= gompd_last_icv_var)
++    return ompd_rc_bad_input;
++  if (callbacks == NULL)
++    return ompd_rc_callback_error;
++  ompd_device_t device;
++  switch (scope)
++    {
++      case ompd_scope_address_space:
++	device = ((ompd_address_space_handle_t *) handle)->kind;
++	break;
++      case ompd_scope_thread:
++	device = ((ompd_thread_handle_t *) handle)->ah->kind;
++	break;
++      case ompd_scope_parallel:
++	device = ((ompd_parallel_handle_t *) handle)->ah->kind;
++	break;
++      case ompd_scope_task:
++	device = ((ompd_task_handle_t *) handle)->ah->kind;
++	break;
++      default:
++	return ompd_rc_bad_input;
++    }
++  /* No cuda.  */
++  if (device == OMPD_DEVICE_KIND_HOST)
++    {
++      switch (icv_id)
++	 {
++	  case gompd_icv_affinity_format_var:
++	    return
++	      gompd_get_affinity_format ((ompd_address_space_handle_t *) handle,
++					 icv_value);
++	  default:
++	    return ompd_rc_unsupported;
++	 }
++    }
++  return ompd_rc_error;
++}
+diff --git a/libgomp/ompd-init.c b/libgomp/ompd-init.c
+new file mode 100644
+index 00000000000..39ffb5276e7
+--- /dev/null
++++ b/libgomp/ompd-init.c
+@@ -0,0 +1,131 @@
++/* Copyright (C) 2022 Free Software Foundation, Inc.
++   Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
++   This file is part of the GNU Offloading and Multi Processing Library
++   (libgomp).
++   Libgomp is free software; you can redistribute it and/or modify it
++   under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 3, or (at your option)
++   any later version.
++   Libgomp is distributed in the hope that it will be useful, but WITHOUT ANY
++   WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
++   FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
++   more details.
++   Under Section 7 of GPL version 3, you are granted additional
++   permissions described in the GCC Runtime Library Exception, version
++   3.1, as published by the Free Software Foundation.
++   You should have received a copy of the GNU General Public License and
++   a copy of the GCC Runtime Library Exception along with this program;
++   see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
++   <http://www.gnu.org/licenses/>.  */
++
++/* This file contains the implementation of functions defined in
++   section 5.5.1, 5.5.2.  */
++
++#include "ompd-helper.h"
++
++/* Per OMPD initialization and finalization.  */
++
++__UINT64_TYPE__ gompd_state;
++const ompd_callbacks_t *callbacks;
++
++ompd_rc_t
++ompd_initialize (ompd_word_t api_version,
++		 const ompd_callbacks_t *callbacks_table)
++{
++  if (callbacks_table == NULL)
++    return ompd_rc_bad_input;
++
++  ompd_word_t version;
++  ompd_rc_t ret = ompd_get_api_version (&version);
++
++  if (version != api_version)
++    return ompd_rc_unsupported;
++
++  callbacks = callbacks_table;
++  return ret;
++}
++
++ompd_rc_t
++ompd_get_api_version (ompd_word_t *version)
++{
++  if (version == NULL)
++    return ompd_rc_bad_input;
++
++  *version = OMPD_VERSION;
++  return ompd_rc_ok;
++}
++
++ompd_rc_t
++ompd_get_version_string (const char **string)
++{
++  if (string == NULL)
++    return ompd_rc_bad_input;
++  static const char tmp_string[]
++    = "GNU OpenMP runtime implementing OMPD version "
++      stringize (OMPD_VERSION) " Debugging library";
++  *string = tmp_string;
++  return ompd_rc_ok;
++}
++
++ompd_rc_t
++ompd_finalize ()
++{
++  return ompd_rc_ok;
++}
++
++/* Per process initialization and finalization.  */
++
++ompd_rc_t
++ompd_process_initialize (ompd_address_space_context_t *context,
++			 ompd_address_space_handle_t **handle)
++{
++  if (context == NULL || handle == NULL)
++    return ompd_rc_bad_input;
++
++  ompd_rc_t ret = get_sizes (context);
++  if (ret != ompd_rc_ok)
++    return ret;
++
++  /* Naive way to read from memory.  */
++  ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
++  GET_VALUE (context, NULL, "gompd_state", gompd_state, gompd_state,
++	     target_sizes.sizeof_long_long, 1, ret, symbol_addr);
++
++  ret = callbacks->alloc_memory (sizeof (ompd_address_space_handle_t),
++				 (void **) (handle));
++
++  if (ret != ompd_rc_ok)
++    return ret;
++
++  if (handle == NULL)
++    return ompd_rc_error;
++
++  (*handle)->context = context;
++  (*handle)->kind = OMPD_DEVICE_KIND_HOST;
++  return ret;
++}
++
++/* OMPD will not support GPUs for now.  */
++
++ompd_rc_t
++ompd_device_initialize (ompd_address_space_handle_t *process_handle,
++			ompd_address_space_context_t *device_context,
++			ompd_device_t kind, ompd_size_t sizeof_id, void *id,
++			ompd_address_space_handle_t **device_handle)
++{
++  if (device_context == NULL)
++    return ompd_rc_bad_input;
++
++  return ompd_rc_unsupported;
++}
++
++
++ompd_rc_t
++ompd_rel_address_space_handle (ompd_address_space_handle_t *handle)
++{
++  if (handle == NULL)
++    return ompd_rc_stale_handle;
++
++  ompd_rc_t ret = callbacks->free_memory ((void *) handle);
++  return ret;
++}
+diff --git a/libgomp/ompd-support.c b/libgomp/ompd-support.c
+new file mode 100644
+index 00000000000..6e040bcf593
+--- /dev/null
++++ b/libgomp/ompd-support.c
+@@ -0,0 +1,120 @@
++/* Copyright (C) 2022 Free Software Foundation, Inc.
++   Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
++   This file is part of the GNU Offloading and Multi Processing Library
++   (libgomp).
++   Libgomp is free software; you can redistribute it and/or modify it
++   under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 3, or (at your option)
++   any later version.
++   Libgomp is distributed in the hope that it will be useful, but WITHOUT ANY
++   WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
++   FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
++   more details.
++   Under Section 7 of GPL version 3, you are granted additional
++   permissions described in the GCC Runtime Library Exception, version
++   3.1, as published by the Free Software Foundation.
++   You should have received a copy of the GNU General Public License and
++   a copy of the GCC Runtime Library Exception along with this program;
++   see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
++   <http://www.gnu.org/licenses/>.  */
++
++#include "ompd-support.h"
++
++#define gompd_declare_access(t, m) __UINT64_TYPE__ gompd_access_##t##_##m;
++  GOMPD_FOREACH_ACCESS (gompd_declare_access)
++#undef gompd_declare_access
++
++#define gompd_declare_sizeof_members(t, m) \
++  __UINT64_TYPE__ gompd_sizeof_##t##_##m;
++  GOMPD_FOREACH_ACCESS (gompd_declare_sizeof_members)
++#undef gompd_declare_sizeof_members
++
++#define gompd_declare_sizes(t) __UINT64_TYPE__ gompd_sizeof_##t;
++  GOMPD_SIZES (gompd_declare_sizes)
++#undef gompd_declare_sizes
++
++const char **ompd_dll_locations = NULL;
++__UINT64_TYPE__ gompd_state;
++
++void
++gompd_load ()
++{
++  /* Get the offset of the struct members.  */
++  #define gompd_init_access(t, m)  \
++    gompd_access_##t##_##m = (__UINT64_TYPE__) & (((struct t *) NULL)->m);
++    GOMPD_FOREACH_ACCESS (gompd_init_access);
++  #undef gompd_init_access
++
++  /* Get sizeof members.  */
++
++  #define gompd_init_sizeof_members(t, m) \
++    gompd_sizeof_##t##_##m = sizeof (((struct t *) NULL)->m);
++    GOMPD_FOREACH_ACCESS (gompd_init_sizeof_members);
++  #undef gompd_declare_sizeof_members
++
++  #define gompd_init_sizes(t) gompd_sizeof_##t = sizeof (struct t);
++    GOMPD_SIZES (gompd_init_sizes)
++  #undef gompd_init_sizes
++
++  #ifdef GOMP_NEEDS_THREAD_HANDLE
++    __UINT64_TYPE__ gompd_access_gomp_thread_handle
++      = (__UINT64_TYPE__) & (((struct gomp_thread *) NULL)->handle);
++    __UINT64_TYPE__ gompd_sizeof_gomp_thread_handle
++      = sizeof (((struct gomp_thread *) NULL)->handle);
++  #endif
++  gomp_debug (2, "OMP OMPD active\n");
++  static const char *ompd_dll_locations_array[2]
++    = {"libgompd" SONAME_SUFFIX (1) , NULL};
++  gompd_state |= OMPD_ENABLED;
++  ompd_dll_locations = &ompd_dll_locations_array[0];
++  ompd_dll_locations_valid ();
++}
++
++#ifndef __ELF__
++/* Dummy functions. they shoud not be optimized.  */
++
++void __attribute__ ((noipa))
++ompd_dll_locations_valid ()
++{
++}
++
++void __attribute__ ((noipa))
++ompd_bp_parallel_begin ()
++{
++}
++
++void __attribute__ ((noipa))
++ompd_bp_parallel_end ()
++{
++}
++
++void __attribute__ ((noipa))
++ompd_bp_task_begin ()
++{
++}
++
++void __attribute__ ((noipa))
++ompd_bp_task_end ()
++{
++}
++
++void __attribute__ ((noipa))
++ompd_bp_thread_begin ()
++{
++}
++
++void __attribute__ ((noipa))
++ompd_bp_thread_end ()
++{
++}
++
++void __attribute__ ((noipa))
++ompd_bp_device_begin ()
++{
++}
++
++void __attribute__ ((noipa))
++ompd_bp_device_end ()
++{
++}
++#endif /* __ELF__*/
+diff --git a/libgomp/ompd-support.h b/libgomp/ompd-support.h
+new file mode 100644
+index 00000000000..7d72076da9e
+--- /dev/null
++++ b/libgomp/ompd-support.h
+@@ -0,0 +1,67 @@
++/* Copyright (C) 2022 Free Software Foundation, Inc.
++  Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
++  This file is part of the GNU Offloading and Multi Processing Library
++  (libgomp).
++  Libgomp is free software; you can redistribute it and/or modify it
++  under the terms of the GNU General Public License as published by
++  the Free Software Foundation; either version 3, or (at your option)
++  any later version.
++  Libgomp is distributed in the hope that it will be useful, but WITHOUT ANY
++  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
++  FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
++  more details.
++  Under Section 7 of GPL version 3, you are granted additional
++  permissions described in the GCC Runtime Library Exception, version
++  3.1, as published by the Free Software Foundation.
++  You should have received a copy of the GNU General Public License and
++  a copy of the GCC Runtime Library Exception along with this program;
++  see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
++  <http://www.gnu.org/licenses/>.  */
++
++/*This file contains the runtime support for gompd.  */
++
++#ifndef _OMPD_SUPPORT_H
++#define _OMPD_SUPPORT_H
++
++#include "omp-tools.h"
++#include "plugin-suffix.h"
++#include "libgomp.h"
++#include <pthread.h>
++#include <string.h>
++#include <stdlib.h>
++#include <stdio.h>
++#include <stddef.h>
++
++#ifdef HAVE_ATTRIBUTE_VISIBILITY
++#pragma GCC visibility push(hidden)
++#endif
++
++void gompd_load (void);
++extern __UINT64_TYPE__ gompd_state;
++
++#define OMPD_ENABLED 0x1
++
++#define GOMPD_FOREACH_ACCESS(gompd_access) \
++  gompd_access (gomp_task_icv, nthreads_var) \
++  gompd_access (gomp_task_icv, run_sched_var) \
++  gompd_access (gomp_task_icv, run_sched_chunk_size) \
++  gompd_access (gomp_task_icv, default_device_var) \
++  gompd_access (gomp_task_icv, thread_limit_var) \
++  gompd_access (gomp_task_icv, dyn_var) \
++  gompd_access (gomp_task_icv, bind_var) \
++  gompd_access (gomp_thread, task) \
++  gompd_access (gomp_thread_pool, threads) \
++  gompd_access (gomp_thread, ts) \
++  gompd_access (gomp_team_state, team_id) \
++  gompd_access (gomp_task, icv)
++
++#define GOMPD_SIZES(gompd_size) \
++  gompd_size (gomp_thread) \
++  gompd_size (gomp_task_icv) \
++  gompd_size (gomp_task)
++
++#ifdef HAVE_ATTRIBUTE_VISIBILITY
++#pragma GCC visibility pop
++#endif
++
++#endif /* _OMPD_SUPPORT_H */
+diff --git a/libgomp/ompd-types.h.in b/libgomp/ompd-types.h.in
+new file mode 100644
+index 00000000000..e5bfb2f37cf
+--- /dev/null
++++ b/libgomp/ompd-types.h.in
+@@ -0,0 +1,54 @@
++/* Copyright (C) 2022 Free Software Foundation, Inc.
++   Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
++   This file is part of the GNU Offloading and Multi Processing Library
++   (libgomp).
++   Libgomp is free software; you can redistribute it and/or modify it
++   under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 3, or (at your option)
++   any later version.
++   Libgomp is distributed in the hope that it will be useful, but WITHOUT ANY
++   WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
++   FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
++   more details.
++   Under Section 7 of GPL version 3, you are granted additional
++   permissions described in the GCC Runtime Library Exception, version
++   3.1, as published by the Free Software Foundation.
++   You should have received a copy of the GNU General Public License and
++   a copy of the GCC Runtime Library Exception along with this program;
++   see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
++   <http://www.gnu.org/licenses/>.  */
++
++/* This file contains the types needed for OMPD implementation.  */
++
++#ifndef _OMPD_TYPES_H
++#define _OMPD_TYPES_H
++
++#ifdef __cpulsplus
++extern "C" {
++#endif
++
++#define OMPD_TYPES_VERSION   20180906 /* YYYYMMDD Format.  */
++
++/* Kinds of device threads.  */
++#define OMPD_THREAD_ID_PTHREAD      ((ompd_thread_id_t)0)
++#define OMPD_THREAD_ID_LWP          ((ompd_thread_id_t)1)
++#define OMPD_THREAD_ID_WINTHREAD    ((ompd_thread_id_t)2)
++
++/* The range of non-standard implementation defined values.  */
++#define OMPD_THREAD_ID_LO       ((ompd_thread_id_t)1000000)
++#define OMPD_THREAD_ID_HI       ((ompd_thread_id_t)1100000)
++
++/* Memory Access Segment definitions for Host and Target Devices.  */
++#define OMPD_SEGMENT_UNSPECIFIED             ((ompd_seg_t)0)
++
++/* Kinds of device device address spaces.  */
++#define OMPD_DEVICE_KIND_HOST     ((ompd_device_t)1)
++
++/* The range of non-standard implementation defined values.  */
++#define OMPD_DEVICE_IMPL_LO       ((ompd_device_t)1000000)
++#define OMPD_DEVICE_IMPL_HI       ((ompd_device_t)1100000)
++
++#ifdef __cplusplus
++} // extern C
++#endif
++#endif /* _OMPD_TYPES_H */
+diff --git a/libgomp/team.c b/libgomp/team.c
+index cb6875d70fa..d81ddc1f54d 100644
+--- a/libgomp/team.c
++++ b/libgomp/team.c
+@@ -30,6 +30,7 @@
+ #include "pool.h"
+ #include <stdlib.h>
+ #include <string.h>
++#include "ompd-support.h"
+ 
+ #ifdef LIBGOMP_USE_PTHREADS
+ pthread_attr_t gomp_thread_attr;
+@@ -74,7 +75,7 @@ gomp_thread_start (void *xdata)
+   struct gomp_thread_pool *pool;
+   void (*local_fn) (void *);
+   void *local_data;
+-
++  ompd_bp_thread_begin ();
+ #if defined HAVE_TLS || defined USE_EMUTLS
+   thr = &gomp_tls_data;
+ #else
+@@ -321,6 +322,7 @@ gomp_team_start (void (*fn) (void *), void *data, unsigned nthreads,
+ 		 unsigned flags, struct gomp_team *team,
+ 		 struct gomp_taskgroup *taskgroup)
+ {
++  ompd_bp_parallel_begin ();
+   struct gomp_thread_start_data *start_data = NULL;
+   struct gomp_thread *thr, *nthr;
+   struct gomp_task *task;
+@@ -1011,6 +1013,7 @@ gomp_team_end (void)
+       pool->last_team = team;
+       gomp_release_thread_pool (pool);
+     }
++  ompd_bp_parallel_end ();
+ }
+ 
+ #ifdef LIBGOMP_USE_PTHREADS
