@@ -34,7 +34,7 @@ libgomp.ver: $(top_srcdir)/libgomp.map
 
 libgompd.ver: $(top_srcdir)/libgompd.map
 	$(EGREP) -v '#(#| |$$)' $< | \
-		$(PREPROCESS) -P -include config.h - > $@ || (rm -f $@ ; exit 1)
+	  $(PREPROCESS) -P -include config.h - > $@ || (rm -f $@ ; exit 1)
 
 if LIBGOMP_BUILD_VERSIONED_SHLIB_GNU
 libgomp_version_script = -Wl,--version-script,libgomp.ver
@@ -61,11 +61,11 @@ libgompd.ver-sun : libgompd.ver \
 		$(top_srcdir)/../contrib/make_sunver.pl \
 		$(libgompd_la_OBJECTS) $(libgompd_la_LIBADD)
 	perl $(top_srcdir)/../contrib/make_sunver.pl \
-		libgompd.ver \
-		$(libgompd_la_OBJECTS:%.lo=.libs/%.o) \
-		`echo $(libgompd_la_LIBADD) | \
-			sed 's,/\([^/.]*\)\.la,/.libs/\1.a,g'` \
-		> $@ || (rm -f $@ ; exit 1)
+	  libgompd.ver \
+	  $(libgompd_la_OBJECTS:%.lo=.libs/%.o) \
+	 `echo $(libgompd_la_LIBADD) | \
+	    sed 's,/\([^/.]*\)\.la,/.libs/\1.a,g'` \
+	 > $@ || (rm -f $@ ; exit 1)
 
 endif
 else
@@ -79,7 +79,7 @@ libgompd_version_info = -version-info $(libtool_VERSION)
 libgomp_la_LDFLAGS = $(libgomp_version_info) $(libgomp_version_script) \
         $(lt_host_flags)
 libgompd_la_LDFLAGS = $(libgompd_version_info) $(libgompd_version_script) \
-		$(lt_host_flags)
+	$(lt_host_flags)
 libgomp_la_DEPENDENCIES = $(libgomp_version_dep)
 libgompd_la_DEPENDENCIES = $(libgompd_version_dep)
 libgomp_la_LINK = $(LINK) $(libgomp_la_LDFLAGS)
