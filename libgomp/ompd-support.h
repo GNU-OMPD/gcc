@@ -32,7 +32,11 @@
 #include <stdio.h>
 #include <stddef.h>
 
-void gompd_load ();
+#ifdef HAVE_ATTRIBUTE_VISIBILITY
+#pragma GCC visibility push(hidden)
+#endif
+
+void gompd_load (void);
 extern __UINT64_TYPE__ gompd_state;
 
 #define OMPD_ENABLED 0x1
@@ -49,11 +53,15 @@ extern __UINT64_TYPE__ gompd_state;
   gompd_access (gomp_thread_pool, threads) \
   gompd_access (gomp_thread, ts) \
   gompd_access (gomp_team_state, team_id) \
+  gompd_access (gomp_task, icv)
 
 #define GOMPD_SIZES(gompd_size) \
   gompd_size (gomp_thread) \
   gompd_size (gomp_task_icv) \
   gompd_size (gomp_task)
 
+#ifdef HAVE_ATTRIBUTE_VISIBILITY
+#pragma GCC visibility pop
+#endif
 
 #endif /* _OMPD_SUPPORT_H */

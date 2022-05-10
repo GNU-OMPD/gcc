@@ -51,7 +51,7 @@ ompd_get_api_version (ompd_word_t *version)
   if (version == NULL)
     return ompd_rc_bad_input;
 
-  *version = VERSION;
+  *version = OMPD_VERSION;
   return ompd_rc_ok;
 }
 
@@ -62,7 +62,7 @@ ompd_get_version_string (const char **string)
     return ompd_rc_bad_input;
   static const char tmp_string[]
     = "GNU OpenMP runtime implementing OMPD version "
-      stringize (VERSION) " Debugging library";
+      stringize (OMPD_VERSION) " Debugging library";
   *string = tmp_string;
   return ompd_rc_ok;
 }

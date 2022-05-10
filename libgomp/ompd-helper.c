@@ -19,7 +19,7 @@
    <http://www.gnu.org/licenses/>.  */
 
 /* This file contains the source code of functions
-  declared in ompd-helper.h.  */
+   declared in ompd-helper.h.  */
 
 #include "ompd-helper.h"
 

@@ -43,9 +43,12 @@ ompd_enumerate_icvs (ompd_address_space_handle_t *ah,
 {
   if (ah == NULL)
     return ompd_rc_stale_handle;
-  if (current + 1 >= gompd_last_icv_var || next_id == NULL
-    || next_icv_name == NULL || next_scope == NULL || more == NULL)
-      return ompd_rc_bad_input;
+  if (current + 1 >= gompd_last_icv_var
+      || next_id == NULL
+      || next_icv_name == NULL
+      || next_scope == NULL
+      || more == NULL)
+	return ompd_rc_bad_input;
   if (callbacks == NULL)
     return ompd_rc_callback_error;
   *next_id = current + 1;

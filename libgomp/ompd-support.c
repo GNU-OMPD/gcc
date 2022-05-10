@@ -39,10 +39,6 @@ __UINT64_TYPE__ gompd_state;
 void
 gompd_load ()
 {
-  const char *ompd_env_var = getenv ("OMP_DEBUG");
-  if (ompd_env_var == NULL || strcmp (ompd_env_var, "enabled"))
-    return;
-
   /* Get the offset of the struct members.  */
   #define gompd_init_access(t, m)  \
     gompd_access_##t##_##m = (__UINT64_TYPE__) & (((struct t *) NULL)->m);
@@ -77,57 +73,48 @@ gompd_load ()
 #ifndef __ELF__
 /* Dummy functions. they shoud not be optimized.  */
 
-void __attribute__ ((noinline))
+void __attribute__ ((noipa))
 ompd_dll_locations_valid ()
 {
-  asm ("");
 }
 
-void __attribute__ ((noinline))
+void __attribute__ ((noipa))
 ompd_bp_parallel_begin ()
 {
-  asm ("");
 }
 
-void __attribute__ ((noinline))
+void __attribute__ ((noipa))
 ompd_bp_parallel_end ()
 {
-  asm ("");
 }
 
-void __attribute__ ((noinline))
+void __attribute__ ((noipa))
 ompd_bp_task_begin ()
 {
-  asm ("");
 }
 
-void __attribute__ ((noinline))
+void __attribute__ ((noipa))
 ompd_bp_task_end ()
 {
-  asm ("");
 }
 
-void __attribute__ ((noinline))
+void __attribute__ ((noipa))
 ompd_bp_thread_begin ()
 {
-  asm ("");
 }
 
-void __attribute__ ((noinline))
+void __attribute__ ((noipa))
 ompd_bp_thread_end ()
 {
-  asm ("");
 }
 
-void __attribute__ ((noinline))
+void __attribute__ ((noipa))
 ompd_bp_device_begin ()
 {
-  asm ("");
 }
 
-void __attribute__ ((noinline))
+void __attribute__ ((noipa))
 ompd_bp_device_end ()
 {
-  asm ("");
 }
 #endif /* __ELF__*/

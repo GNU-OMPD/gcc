@@ -30,6 +30,8 @@ extern "C" {
 
 #include "omp-tools.h"
 #include "ompd-types.h"
+#include "config.h"
+#include <assert.h>
 #include <stdio.h>
 #include <stddef.h>
 #include <string.h>
@@ -38,7 +40,7 @@ extern "C" {
 #define stringize(x) stringize1(x)
 #define stringize1(x) #x
 
-#define VERSION 202011
+#define OMPD_VERSION 202011
 
 extern const ompd_callbacks_t *callbacks;
 extern __UINT64_TYPE__ gompd_state;
@@ -98,7 +100,7 @@ typedef struct _ompd_task_handle
 
 /* (var_name, string_name, scope).  */
 #define FOREACH_OMPD_ICV(ompd_icv) \
-  ompd_icv (nthread_var, "nthread var", ompd_scope_thread) \
+  ompd_icv (nthreads_var, "nthread var", ompd_scope_thread) \
   ompd_icv (thread_limit_var, "thread limit var", ompd_scope_task) \
   ompd_icv (run_sched_var, "run sched limit var", ompd_scope_task) \
   ompd_icv (run_sched_chunk_size, "run sched chunk size var", ompd_scope_task) \
@@ -141,6 +143,10 @@ enum ompd_icv
   gompd_last_icv_var
 };
 
+#ifdef HAVE_ATTRIBUTE_VISIBILITY
+#pragma GCC visibility push(hidden)
+#endif
+
 ompd_rc_t get_sizes (ompd_address_space_context_t *);
 
 /* Get Local internal control variables.  */
@@ -180,6 +186,11 @@ ompd_rc_t gompd_get_throttled_spin_count (ompd_address_space_handle_t *,
 ompd_rc_t gompd_get_managed_threads (ompd_address_space_handle_t *,
 				     ompd_word_t *);
 /*End of Global ICVs.  */
+
+
+#ifdef HAVE_ATTRIBUTE_VISIBILITY
+#pragma GCC visibility pop
+#endif
 
 #ifdef __cplusplus
 } // extern C
