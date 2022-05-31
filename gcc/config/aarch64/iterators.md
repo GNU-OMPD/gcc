@@ -63,18 +63,25 @@
 ;; Iterator for all 16-bit scalar floating point modes (HF, BF)
 (define_mode_iterator HFBF [HF BF])
 
-;; Iterator for all scalar floating point modes (HF, SF, DF and TF)
-(define_mode_iterator GPF_TF_F16 [HF SF DF TF])
-
 ;; Iterator for all scalar floating point modes suitable for moving, including
-;; special BF type (HF, SF, DF, TF and BF)
-(define_mode_iterator GPF_TF_F16_MOV [HF BF SF DF TF])
+;; special BF type and decimal floating point types (HF, SF, DF, TF, BF,
+;; SD, DD and TD)
+(define_mode_iterator GPF_TF_F16_MOV [HF BF SF DF TF SD DD TD])
+
+;; Iterator for scalar 32bit fp modes (SF, SD)
+(define_mode_iterator SFD [SD SF])
+
+;; Iterator for scalar 64bit fp modes (DF, DD)
+(define_mode_iterator DFD [DD DF])
+
+;; Iterator for scalar 128bit fp modes (TF, TD)
+(define_mode_iterator TFD [TD TF])
 
 ;; Double vector modes.
 (define_mode_iterator VDF [V2SF V4HF])
 
-;; Iterator for all scalar floating point modes (SF, DF and TF)
-(define_mode_iterator GPF_TF [SF DF TF])
+;; Iterator for all scalar floating point modes (SF, DF, TF, SD, DD, and TD)
+(define_mode_iterator GPF_TF [SF DF TF SD DD TD])
 
 ;; Integer Advanced SIMD modes.
 (define_mode_iterator VDQ_I [V8QI V16QI V4HI V8HI V2SI V4SI V2DI])
@@ -236,6 +243,9 @@
 ;; Double vector modes for combines.
 (define_mode_iterator VDC [V8QI V4HI V4BF V4HF V2SI V2SF DI DF])
 
+;; VDC plus SI and SF.
+(define_mode_iterator VDCSIF [V8QI V4HI V4BF V4HF V2SI V2SF SI SF DI DF])
+
 ;; Polynomial modes for vector combines.
 (define_mode_iterator VDC_P [V8QI V4HI DI])
 
@@ -298,7 +308,7 @@
 ;; 2 and 4 lane SI modes.
 (define_mode_iterator VS [V2SI V4SI])
 
-(define_mode_iterator TX [TI TF])
+(define_mode_iterator TX [TI TF TD])
 
 ;; Advanced SIMD opaque structure modes.
 (define_mode_iterator VSTRUCT [OI CI XI])
@@ -400,10 +410,10 @@
 				  V4x8HF V4x4SF V4x2DF V4x8BF])
 
 ;; Double scalar modes
-(define_mode_iterator DX [DI DF])
+(define_mode_iterator DX [DI DF DD])
 
 ;; Duplicate of the above
-(define_mode_iterator DX2 [DI DF])
+(define_mode_iterator DX2 [DI DF DD])
 
 ;; Single scalar modes
 (define_mode_iterator SX [SI SF])
@@ -1436,8 +1446,8 @@
 (define_mode_attr VDBL [(V8QI "V16QI") (V4HI "V8HI")
 			(V4HF "V8HF")  (V4BF "V8BF")
 			(V2SI "V4SI")  (V2SF "V4SF")
-			(SI   "V2SI")  (DI   "V2DI")
-			(DF   "V2DF")])
+			(SI   "V2SI")  (SF   "V2SF")
+			(DI   "V2DI")  (DF   "V2DF")])
 
 ;; Register suffix for double-length mode.
 (define_mode_attr Vdtype [(V4HF "8h") (V2SF "4s")])
@@ -1556,6 +1566,30 @@
 (define_mode_attr Vhalftype [(V16QI "8b") (V8HI "4h")
 			     (V4SI "2s") (V8HF "4h")
 			     (V4SF "2s")])
+
+;; Whether a mode fits in W or X registers (i.e. "w" for 32-bit modes
+;; and "x" for 64-bit modes).
+(define_mode_attr single_wx [(SI   "w") (SF   "w")
+			     (V8QI "x") (V4HI "x")
+			     (V4HF "x") (V4BF "x")
+			     (V2SI "x") (V2SF "x")
+			     (DI   "x") (DF   "x")])
+
+;; Whether a mode fits in S or D registers (i.e. "s" for 32-bit modes
+;; and "d" for 64-bit modes).
+(define_mode_attr single_type [(SI   "s") (SF   "s")
+			       (V8QI "d") (V4HI "d")
+			       (V4HF "d") (V4BF "d")
+			       (V2SI "d") (V2SF "d")
+			       (DI   "d") (DF   "d")])
+
+;; Whether a double-width mode fits in D or Q registers (i.e. "d" for
+;; 32-bit modes and "q" for 64-bit modes).
+(define_mode_attr single_dtype [(SI   "d") (SF   "d")
+			        (V8QI "q") (V4HI "q")
+			        (V4HF "q") (V4BF "q")
+			        (V2SI "q") (V2SF "q")
+			        (DI   "q") (DF   "q")])
 
 ;; Define corresponding core/FP element mode for each vector mode.
 (define_mode_attr vw [(V8QI "w") (V16QI "w")
@@ -1849,6 +1883,13 @@
 		     (V4x1DF "") (V4x2DF "_q")
 		     (V4x4BF "") (V4x8BF "_q")])
 
+;; Equivalent of the "q" attribute for the <VDBL> mode.
+(define_mode_attr dblq [(SI   "") (SF   "")
+		        (V8QI "_q") (V4HI "_q")
+		        (V4HF "_q") (V4BF "_q")
+		        (V2SI "_q") (V2SF "_q")
+		        (DI   "_q") (DF   "_q")])
+
 (define_mode_attr vp [(V8QI "v") (V16QI "v")
 		      (V4HI "v") (V8HI  "v")
 		      (V2SI "p") (V4SI  "v")
@@ -2078,7 +2119,10 @@
 ;; -------------------------------------------------------------------
 
 ;; This code iterator allows the various shifts supported on the core
-(define_code_iterator SHIFT [ashift ashiftrt lshiftrt rotatert])
+(define_code_iterator SHIFT [ashift ashiftrt lshiftrt rotatert rotate])
+
+;; This code iterator allows all shifts except for rotates.
+(define_code_iterator SHIFT_no_rotate [ashift ashiftrt lshiftrt])
 
 ;; This code iterator allows the shifts supported in arithmetic instructions
 (define_code_iterator ASHIFT [ashift ashiftrt lshiftrt])
@@ -2087,6 +2131,9 @@
 
 ;; Code iterator for logical operations
 (define_code_iterator LOGICAL [and ior xor])
+
+;; LOGICAL with plus, for when | gets converted to +.
+(define_code_iterator LOGICAL_OR_PLUS [and ior xor plus])
 
 ;; LOGICAL without AND.
 (define_code_iterator LOGICAL_OR [ior xor])
@@ -2205,6 +2252,7 @@
 			 (ashiftrt "ashr")
 			 (lshiftrt "lshr")
 			 (rotatert "rotr")
+			 (rotate   "rotl")
 			 (sign_extend "extend")
 			 (zero_extend "zero_extend")
 			 (sign_extract "extv")
@@ -2294,7 +2342,10 @@
 
 ;; Similar for the instruction mnemonics
 (define_code_attr shift [(ashift "lsl") (ashiftrt "asr")
-			 (lshiftrt "lsr") (rotatert "ror")])
+			 (lshiftrt "lsr") (rotatert "ror") (rotate "ror")])
+;; True if shift is rotate left.
+(define_code_attr is_rotl [(ashift "0") (ashiftrt "0")
+			   (lshiftrt "0") (rotatert "0") (rotate "1")])
 
 ;; Op prefix for shift right and accumulate.
 (define_code_attr sra_op [(ashiftrt "s") (lshiftrt "u")])

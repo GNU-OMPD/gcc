@@ -740,7 +740,7 @@ build_cplus_new (tree type, tree init, tsubst_flags_t complain)
    constructor calls until gimplification time; now we only do it to set
    VEC_INIT_EXPR_IS_CONSTEXPR.
 
-   We assume that init is either NULL_TREE, void_type_node (indicating
+   We assume that init is either NULL_TREE, {}, void_type_node (indicating
    value-initialization), or another array to copy.  */
 
 static tree
@@ -752,7 +752,20 @@ build_vec_init_elt (tree type, tree init, tsubst_flags_t complain)
       || !CLASS_TYPE_P (inner_type))
     /* No interesting initialization to do.  */
     return integer_zero_node;
-  else if (init == void_type_node)
+  if (init && BRACE_ENCLOSED_INITIALIZER_P (init))
+    {
+      /* Even if init has initializers for some array elements,
+	 we're interested in the {}-init of trailing elements.	*/
+      if (CP_AGGREGATE_TYPE_P (inner_type))
+	{
+	  tree empty = build_constructor (init_list_type_node, nullptr);
+	  return digest_init (inner_type, empty, complain);
+	}
+      else
+	/* It's equivalent to value-init.  */
+	init = void_type_node;
+    }
+  if (init == void_type_node)
     return build_value_init (inner_type, complain);
 
   releasing_vec argvec;
@@ -808,9 +821,13 @@ build_vec_init_expr (tree type, tree init, tsubst_flags_t complain)
   TREE_SIDE_EFFECTS (init) = true;
   SET_EXPR_LOCATION (init, input_location);
 
-  if (cxx_dialect >= cxx11
-      && potential_constant_expression (elt_init))
-    VEC_INIT_EXPR_IS_CONSTEXPR (init) = true;
+  if (cxx_dialect >= cxx11)
+    {
+      bool cx = potential_constant_expression (elt_init);
+      if (BRACE_ENCLOSED_INITIALIZER_P (init))
+	cx &= potential_constant_expression (init);
+      VEC_INIT_EXPR_IS_CONSTEXPR (init) = cx;
+    }
   VEC_INIT_EXPR_VALUE_INIT (init) = value_init;
 
   return init;
@@ -1566,7 +1583,8 @@ apply_identity_attributes (tree result, tree attribs, bool *remove_attributes)
    stripped.  */
 
 tree
-strip_typedefs (tree t, bool *remove_attributes, unsigned int flags)
+strip_typedefs (tree t, bool *remove_attributes /* = NULL */,
+		unsigned int flags /* = 0 */)
 {
   tree result = NULL, type = NULL, t0 = NULL;
 
@@ -1780,7 +1798,7 @@ strip_typedefs (tree t, bool *remove_attributes, unsigned int flags)
 	    type = strip_typedefs (pat, remove_attributes, flags);
 	    if (type != pat)
 	      {
-		result = copy_node (t);
+		result = build_distinct_type_copy (t);
 		PACK_EXPANSION_PATTERN (result) = type;
 	      }
 	  }
@@ -4834,8 +4852,8 @@ structural_type_p (tree t, bool explain)
 	explain_non_literal_class (t);
       return false;
     }
-  for (tree m = next_initializable_field (TYPE_FIELDS (t)); m;
-       m = next_initializable_field (DECL_CHAIN (m)))
+  for (tree m = next_aggregate_field (TYPE_FIELDS (t)); m;
+       m = next_aggregate_field (DECL_CHAIN (m)))
     {
       if (TREE_PRIVATE (m) || TREE_PROTECTED (m))
 	{
@@ -5396,9 +5414,8 @@ cp_walk_subtrees (tree *tp, int *walk_subtrees_p, walk_tree_fn func,
     case NONTYPE_ARGUMENT_PACK:
       {
         tree args = ARGUMENT_PACK_ARGS (*tp);
-        int i, len = TREE_VEC_LENGTH (args);
-        for (i = 0; i < len; i++)
-          WALK_SUBTREE (TREE_VEC_ELT (args, i));
+	for (tree arg : tree_vec_range (args))
+	  WALK_SUBTREE (arg);
       }
       break;
 
@@ -6101,6 +6118,25 @@ maybe_warn_zero_as_null_pointer_constant (tree expr, location_t loc)
     }
   return false;
 }
+
+/* FNDECL is a function declaration whose type may have been altered by
+   adding extra parameters such as this, in-charge, or VTT.  When this
+   takes place, the positional arguments supplied by the user (as in the
+   'format' attribute arguments) may refer to the wrong argument.  This
+   function returns an integer indicating how many arguments should be
+   skipped.  */
+
+int
+maybe_adjust_arg_pos_for_attribute (const_tree fndecl)
+{
+  if (!fndecl)
+    return 0;
+  int n = num_artificial_parms_for (fndecl);
+  /* The manual states that it's the user's responsibility to account
+     for the implicit this parameter.  */
+  return n > 0 ? n - 1 : 0;
+}
+
 
 /* Release memory we no longer need after parsing.  */
 void

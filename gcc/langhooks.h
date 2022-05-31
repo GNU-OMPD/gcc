@@ -188,6 +188,11 @@ struct lang_hooks_for_types
   /* Returns a tree for the unit size of T excluding tail padding that
      might be used by objects inheriting from T.  */
   tree (*unit_size_without_reusable_padding) (tree);
+
+  /* Returns type corresponding to FIELD's type when FIELD is a C++ base class
+     i.e., type without virtual base classes or tail padding.  Returns
+     NULL_TREE otherwise.  */
+  tree (*classtype_as_base) (const_tree);
 };
 
 /* Language hooks related to decls and the symbol table.  */
@@ -240,6 +245,11 @@ struct lang_hooks_for_decls
      if original tree is not an array descriptor.  If the second argument
      is true, only the TREE_TYPE is returned without generating a new tree.  */
   tree (*omp_array_data) (tree, bool);
+
+  /* Return a tree for the actual data of an array descriptor - or NULL_TREE
+     if original tree is not an array descriptor.  If the second argument
+     is true, only the TREE_TYPE is returned without generating a new tree.  */
+  tree (*omp_array_size) (tree, gimple_seq *pre_p);
 
   /* True if OpenMP should regard this DECL as being a scalar which has Fortran's
      allocatable or pointer attribute.  */

@@ -35,10 +35,11 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree-scalar-evolution.h"
 #include "gimple-range.h"
 #include "gimple-fold.h"
+#include "gimple-walk.h"
 
-gimple_ranger::gimple_ranger () :
+gimple_ranger::gimple_ranger (bool use_imm_uses) :
 	non_executable_edge_flag (cfun),
-	m_cache (non_executable_edge_flag),
+	m_cache (non_executable_edge_flag, use_imm_uses),
 	tracer (""),
 	current_bb (NULL)
 {
@@ -117,8 +118,12 @@ gimple_ranger::range_of_expr (irange &r, tree expr, gimple *stmt)
       // If name is defined in this block, try to get an range from S.
       if (def_stmt && gimple_bb (def_stmt) == bb)
 	{
-	  range_of_stmt (r, def_stmt, expr);
-	  m_cache.m_non_null.adjust_range (r, expr, bb, true);
+	  // Declared in ths block, if it has a global set, check for an
+	  // override from a block walk, otherwise calculate it.
+	  if (m_cache.get_global_range (r, expr))
+	    m_cache.block_range (r, bb, expr, false);
+	  else
+	    range_of_stmt (r, def_stmt, expr);
 	}
       // Otherwise OP comes from outside this block, use range on entry.
       else
@@ -150,8 +155,6 @@ gimple_ranger::range_on_entry (irange &r, basic_block bb, tree name)
   // Now see if there is any on_entry value which may refine it.
   if (m_cache.block_range (entry_range, bb, name))
     r.intersect (entry_range);
-
-  m_cache.m_non_null.adjust_range (r, name, bb, true);
 
   if (idx)
     tracer.trailer (idx, "range_on_entry", true, name, r);
@@ -227,6 +230,9 @@ gimple_ranger::range_on_edge (irange &r, edge e, tree name)
   else
     {
       range_on_exit (r, e->src, name);
+      // If this is not an abnormal edge, check for a non-null exit .
+      if ((e->flags & (EDGE_EH | EDGE_ABNORMAL)) == 0)
+	m_cache.m_exit.maybe_adjust_range (r, name, e->src);
       gcc_checking_assert  (r.undefined_p ()
 			    || range_compatible_p (r.type(), TREE_TYPE (name)));
 
@@ -383,6 +389,10 @@ gimple_ranger::prefill_stmt_dependencies (tree ssa)
 	      // Fold and save the value for NAME.
 	      stmt = SSA_NAME_DEF_STMT (name);
 	      fold_range_internal (r, stmt, name);
+	      // Make sure we don't lose any current global info.
+	      int_range_max tmp;
+	      m_cache.get_global_range (tmp, name);
+	      r.intersect (tmp);
 	      m_cache.set_global_range (name, r);
 	    }
 	  continue;
@@ -434,6 +444,38 @@ gimple_ranger::fold_stmt (gimple_stmt_iterator *gsi, tree (*valueize) (tree))
   bool ret = ::fold_stmt (gsi, valueize);
   current_bb = NULL;
   return ret;
+}
+
+// Called during dominator walks to register any side effects that take effect
+// from this point forward.  Current release is only for tracking non-null
+// within a block.
+
+void
+gimple_ranger::register_side_effects (gimple *s)
+{
+  // First, export the LHS if it is a new global range.
+  tree lhs = gimple_get_lhs (s);
+  if (lhs)
+    {
+      int_range_max tmp;
+      if (range_of_stmt (tmp, s, lhs) && !tmp.varying_p ()
+	  && update_global_range (tmp, lhs) && dump_file)
+	{
+	  value_range vr = tmp;
+	  fprintf (dump_file, "Global Exported: ");
+	  print_generic_expr (dump_file, lhs, TDF_SLIM);
+	  fprintf (dump_file, " = ");
+	  vr.dump (dump_file);
+	  int_range_max same = vr;
+	  if (same != tmp)
+	    {
+	      fprintf (dump_file, " ...  irange was : ");
+	      tmp.dump (dump_file);
+	    }
+	  fputc ('\n', dump_file);
+	}
+    }
+  m_cache.apply_side_effects (s);
 }
 
 // This routine will export whatever global ranges are known to GCC
@@ -578,12 +620,12 @@ gimple_ranger::debug ()
    resources.  */
 
 gimple_ranger *
-enable_ranger (struct function *fun)
+enable_ranger (struct function *fun, bool use_imm_uses)
 {
   gimple_ranger *r;
 
   gcc_checking_assert (!fun->x_range_query);
-  r = new gimple_ranger;
+  r = new gimple_ranger (use_imm_uses);
   fun->x_range_query = r;
 
   return r;

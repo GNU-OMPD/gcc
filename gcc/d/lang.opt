@@ -138,10 +138,6 @@ Wspeculative
 D
 Warn from speculative compiles such as __traits(compiles).
 
-Wtemplates
-D
-; Documented in C
-
 Wunknown-pragmas
 D Var(warn_unknown_pragmas) LangEnabledBy(D, Wextra)
 ; Documented in C
@@ -277,7 +273,7 @@ Add comments for ignored declarations in the generated C++ header.
 
 fdump-c++-spec=
 D RejectNegative Joined
--fdump-cxx-spec=<filename>	Write all declarations as C++ code to <file>.
+-fdump-cxx-spec=<filename>	Write all declarations as C++ code to <filename>.
 
 fdump-d-original
 D
@@ -344,6 +340,10 @@ fpreview=all
 D RejectNegative
 Turn on all upcoming D language features.
 
+fpreview=bitfields
+D RejectNegative
+Implement D bit-fields.
+
 fpreview=dip1000
 D RejectNegative
 Implement DIP1000: Scoped pointers.
@@ -370,7 +370,7 @@ Use field-wise comparisons for struct equality.
 
 fpreview=fixaliasthis
 D RejectNegative
-When a symbol is resolved, check alias this scope before going to upper scopes.
+When a symbol is resolved, check `alias this' scope before going to upper scopes.
 
 fpreview=in
 D RejectNegative
@@ -400,6 +400,10 @@ frevert=all
 D RejectNegative
 Turn off all revertable D language features.
 
+frevert=dip1000
+D RejectNegative
+Revert DIP1000: Scoped pointers.
+
 frevert=dip25
 D RejectNegative
 Revert DIP25: Sealed references.
@@ -411,10 +415,6 @@ Don't destruct fields of partially constructed objects.
 frevert=intpromote
 D RejectNegative
 Use C-style integral promotion for unary '+', '-' and '~'.
-
-frevert=markdown
-D RejectNegative
-Disable Markdown replacements in Ddoc.
 
 frtti
 D
@@ -451,10 +451,6 @@ List statistics on template instantiations.
 ftransition=tls
 D RejectNegative
 List all variables going into thread local storage.
-
-ftransition=vmarkdown
-D RejectNegative
-List instances of Markdown replacements in Ddoc.
 
 funittest
 D

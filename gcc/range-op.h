@@ -53,7 +53,7 @@ public:
   virtual bool fold_range (irange &r, tree type,
 			   const irange &lh,
 			   const irange &rh,
-			   relation_kind rel = VREL_NONE) const;
+			   relation_kind rel = VREL_VARYING) const;
 
   // Return the range for op[12] in the general case.  LHS is the range for
   // the LHS of the expression, OP[12]is the range for the other
@@ -69,22 +69,25 @@ public:
   virtual bool op1_range (irange &r, tree type,
 			  const irange &lhs,
 			  const irange &op2,
-			  relation_kind rel = VREL_NONE) const;
+			  relation_kind rel = VREL_VARYING) const;
   virtual bool op2_range (irange &r, tree type,
 			  const irange &lhs,
 			  const irange &op1,
-			  relation_kind rel = VREL_NONE) const;
+			  relation_kind rel = VREL_VARYING) const;
 
   // The following routines are used to represent relations between the
   // various operations.  If the caller knows where the symbolics are,
   // it can query for relationships between them given known ranges.
-  virtual enum tree_code lhs_op1_relation (const irange &lhs,
-					   const irange &op1,
-					   const irange &op2) const;
-  virtual enum tree_code lhs_op2_relation (const irange &lhs,
-					   const irange &op1,
-					   const irange &op2) const;
-  virtual enum tree_code op1_op2_relation (const irange &lhs) const;
+  // the optional relation passed in is the relation between op1 and op2.
+  virtual relation_kind lhs_op1_relation (const irange &lhs,
+					  const irange &op1,
+					  const irange &op2,
+					  relation_kind = VREL_VARYING) const;
+  virtual relation_kind lhs_op2_relation (const irange &lhs,
+					  const irange &op1,
+					  const irange &op2,
+					  relation_kind = VREL_VARYING) const;
+  virtual relation_kind op1_op2_relation (const irange &lhs) const;
 protected:
   // Perform an integral operation between 2 sub-ranges and return it.
   virtual void wi_fold (irange &r, tree type,
@@ -111,5 +114,77 @@ extern void wi_set_zero_nonzero_bits (tree type,
 				      const wide_int &, const wide_int &,
 				      wide_int &maybe_nonzero,
 				      wide_int &mustbe_nonzero);
+
+// op1_op2_relation methods that are the same across irange and frange.
+relation_kind equal_op1_op2_relation (const irange &lhs);
+relation_kind not_equal_op1_op2_relation (const irange &lhs);
+relation_kind lt_op1_op2_relation (const irange &lhs);
+relation_kind le_op1_op2_relation (const irange &lhs);
+relation_kind gt_op1_op2_relation (const irange &lhs);
+relation_kind ge_op1_op2_relation (const irange &lhs);
+
+enum bool_range_state { BRS_FALSE, BRS_TRUE, BRS_EMPTY, BRS_FULL };
+bool_range_state get_bool_state (irange &r, const irange &lhs, tree val_type);
+
+// If the range of either op1 or op2 is undefined, set the result to
+// varying and return TRUE.  If the caller truely cares about a result,
+// they should pass in a varying if it has an undefined that it wants
+// treated as a varying.
+
+inline bool
+empty_range_varying (irange &r, tree type,
+		     const irange &op1, const irange & op2)
+{
+  if (op1.undefined_p () || op2.undefined_p ())
+    {
+      r.set_varying (type);
+      return true;
+    }
+  else
+    return false;
+}
+
+// For relation opcodes, first try to see if the supplied relation
+// forces a true or false result, and return that.
+// Then check for undefined operands.  If none of this applies,
+// return false.
+
+inline bool
+relop_early_resolve (irange &r, tree type, const irange &op1,
+		     const irange &op2, relation_kind rel,
+		     relation_kind my_rel)
+{
+  // If known relation is a complete subset of this relation, always true.
+  if (relation_union (rel, my_rel) == my_rel)
+    {
+      r = range_true (type);
+      return true;
+    }
+
+  // If known relation has no subset of this relation, always false.
+  if (relation_intersect (rel, my_rel) == VREL_UNDEFINED)
+    {
+      r = range_false (type);
+      return true;
+    }
+
+  // If either operand is undefined, return VARYING.
+  if (empty_range_varying (r, type, op1, op2))
+    return true;
+
+  return false;
+}
+
+// This implements the range operator tables as local objects.
+
+class range_op_table
+{
+public:
+  range_operator *operator[] (enum tree_code code);
+protected:
+  void set (enum tree_code code, range_operator &op);
+private:
+  range_operator *m_range_tree[MAX_TREE_CODES];
+};
 
 #endif // GCC_RANGE_OP_H

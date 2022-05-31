@@ -1818,6 +1818,10 @@ constraint_manager::add_constraint (const svalue *lhs,
 	      = m_mgr->get_or_create_constant_svalue (offset_of_cst);
 	    if (!add_constraint (implied_lhs, implied_op, implied_rhs))
 	      return false;
+	    /* The above add_constraint could lead to EC merger, so we need
+	       to refresh the EC IDs.  */
+	    lhs_ec_id = get_or_add_equiv_class (lhs);
+	    rhs_ec_id = get_or_add_equiv_class (rhs);
 	  }
 
   add_unknown_constraint (lhs_ec_id, op, rhs_ec_id);
@@ -2901,7 +2905,7 @@ public:
   {}
 
   void on_fact (const svalue *lhs, enum tree_code code, const svalue *rhs)
-    FINAL OVERRIDE
+    final override
   {
     /* Special-case for widening.  */
     if (lhs->get_kind () == SK_WIDENING)
@@ -2929,7 +2933,7 @@ public:
   }
 
   void on_ranges (const svalue *lhs_sval,
-		  const bounded_ranges *ranges) FINAL OVERRIDE
+		  const bounded_ranges *ranges) final override
   {
     for (const auto &iter : m_cm_b->m_bounded_ranges_constraints)
       {

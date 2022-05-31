@@ -1011,8 +1011,12 @@ extern (C) void[] _d_newarrayiT(const TypeInfo ti, size_t length) pure nothrow @
     foreach (T; AliasSeq!(ubyte, ushort, uint, ulong))
     {
     case T.sizeof:
-        (cast(T*)result.ptr)[0 .. size * length / T.sizeof] = *cast(T*)init.ptr;
-        return result;
+        if (tinext.talign % T.alignof == 0)
+        {
+            (cast(T*)result.ptr)[0 .. size * length / T.sizeof] = *cast(T*)init.ptr;
+            return result;
+        }
+        goto default;
     }
 
     default:
@@ -1118,7 +1122,8 @@ extern (C) void* _d_newitemU(scope const TypeInfo _ti) pure nothrow @weak
 
     if (tiSize)
     {
-        *cast(TypeInfo*)(p + itemSize) = null; // the GC might not have cleared this area
+        // the GC might not have cleared the padding area in the block
+        *cast(TypeInfo*)(p + (itemSize & ~(size_t.sizeof - 1))) = null;
         *cast(TypeInfo*)(p + blkInf.size - tiSize) = cast() ti;
     }
 
@@ -2121,7 +2126,7 @@ extern (C) void[] _d_arrayappendcd(ref byte[] x, dchar c) @weak
 
     // Hack because _d_arrayappendT takes `x` as a reference
     auto xx = cast(shared(char)[])x;
-    object._d_arrayappendTImpl!(shared(char)[])._d_arrayappendT(xx, cast(shared(char)[])appendthis);
+    object._d_arrayappendT(xx, cast(shared(char)[])appendthis);
     x = cast(byte[])xx;
     return x;
 }
@@ -2182,7 +2187,7 @@ extern (C) void[] _d_arrayappendwd(ref byte[] x, dchar c) @weak
     //
 
     auto xx = (cast(shared(wchar)*)x.ptr)[0 .. x.length];
-    object._d_arrayappendTImpl!(shared(wchar)[])._d_arrayappendT(xx, cast(shared(wchar)[])appendthis);
+    object._d_arrayappendT(xx, cast(shared(wchar)[])appendthis);
     x = (cast(byte*)xx.ptr)[0 .. xx.length];
     return x;
 }

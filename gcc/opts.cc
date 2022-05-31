@@ -35,6 +35,9 @@ along with GCC; see the file COPYING3.  If not see
 #include "version.h"
 #include "selftest.h"
 
+/* In this file all option sets are explicit.  */
+#undef OPTION_SET_P
+
 static void set_Wstrict_aliasing (struct gcc_options *opts, int onoff);
 
 /* Names of fundamental debug info formats indexed by enum
@@ -154,9 +157,9 @@ ctf_debuginfo_p ()
 /* Return TRUE iff dwarf2 debug info is enabled.  */
 
 bool
-dwarf_debuginfo_p ()
+dwarf_debuginfo_p (struct gcc_options *opts)
 {
-  return (write_symbols & DWARF2_DEBUG);
+  return (opts->x_write_symbols & DWARF2_DEBUG);
 }
 
 /* Return true iff the debug info format is to be generated based on DWARF
@@ -167,6 +170,11 @@ bool dwarf_based_debuginfo_p ()
   return ((write_symbols & CTF_DEBUG)
 	  || (write_symbols & BTF_DEBUG));
 }
+
+/* All flag uses below need to explicitely reference the option sets
+   to operate on.  */
+#define global_options DO_NOT_USE
+#define global_options_set DO_NOT_USE
 
 /* Parse the -femit-struct-debug-detailed option value
    and set the flag variables. */
@@ -1302,53 +1310,86 @@ finish_options (struct gcc_options *opts, struct gcc_options *opts_set,
     SET_OPTION_IF_UNSET (opts, opts_set, flag_vect_cost_model,
 			 VECT_COST_MODEL_CHEAP);
 
+  if (opts->x_flag_gtoggle)
+    {
+      /* Make sure to process -gtoggle only once.  */
+      opts->x_flag_gtoggle = false;
+      if (opts->x_debug_info_level == DINFO_LEVEL_NONE)
+	{
+	  opts->x_debug_info_level = DINFO_LEVEL_NORMAL;
+
+	  if (opts->x_write_symbols == NO_DEBUG)
+	    opts->x_write_symbols = PREFERRED_DEBUGGING_TYPE;
+	}
+      else
+	opts->x_debug_info_level = DINFO_LEVEL_NONE;
+    }
+
+  if (!opts_set->x_debug_nonbind_markers_p)
+    opts->x_debug_nonbind_markers_p
+      = (opts->x_optimize
+	 && opts->x_debug_info_level >= DINFO_LEVEL_NORMAL
+	 && dwarf_debuginfo_p (opts)
+	 && !(opts->x_flag_selective_scheduling
+	      || opts->x_flag_selective_scheduling2));
+
+  /* We know which debug output will be used so we can set flag_var_tracking
+     and flag_var_tracking_uninit if the user has not specified them.  */
+  if (opts->x_debug_info_level < DINFO_LEVEL_NORMAL
+      || !dwarf_debuginfo_p (opts)
+      /* We have not yet initialized debug hooks so match that to check
+	 whether we're only doing DWARF2_LINENO_DEBUGGING_INFO.  */
+#ifndef DWARF2_DEBUGGING_INFO
+      || true
+#endif
+     )
+    {
+      if ((opts_set->x_flag_var_tracking && opts->x_flag_var_tracking == 1)
+	  || (opts_set->x_flag_var_tracking_uninit
+	      && opts->x_flag_var_tracking_uninit == 1))
+	{
+	  if (opts->x_debug_info_level < DINFO_LEVEL_NORMAL)
+	    warning_at (UNKNOWN_LOCATION, 0,
+			"variable tracking requested, but useless unless "
+			"producing debug info");
+	  else
+	    warning_at (UNKNOWN_LOCATION, 0,
+			"variable tracking requested, but not supported "
+			"by this debug format");
+	}
+      opts->x_flag_var_tracking = 0;
+      opts->x_flag_var_tracking_uninit = 0;
+    }
+
   /* One could use EnabledBy, but it would lead to a circular dependency.  */
-  if (!OPTION_SET_P (flag_var_tracking_uninit))
-     flag_var_tracking_uninit = flag_var_tracking;
+  if (!opts_set->x_flag_var_tracking_uninit)
+    opts->x_flag_var_tracking_uninit = opts->x_flag_var_tracking;
 
-  if (!OPTION_SET_P (flag_var_tracking_assignments))
-    flag_var_tracking_assignments
-      = (flag_var_tracking
-	 && !(flag_selective_scheduling || flag_selective_scheduling2));
+  if (!opts_set->x_flag_var_tracking_assignments)
+    opts->x_flag_var_tracking_assignments
+      = (opts->x_flag_var_tracking
+	 && !(opts->x_flag_selective_scheduling
+	      || opts->x_flag_selective_scheduling2));
 
-  if (flag_var_tracking_assignments_toggle)
-    flag_var_tracking_assignments = !flag_var_tracking_assignments;
+  if (opts->x_flag_var_tracking_assignments_toggle)
+    opts->x_flag_var_tracking_assignments
+      = !opts->x_flag_var_tracking_assignments;
 
-  if (flag_var_tracking_assignments && !flag_var_tracking)
-    flag_var_tracking = flag_var_tracking_assignments = -1;
+  if (opts->x_flag_var_tracking_assignments && !opts->x_flag_var_tracking)
+    opts->x_flag_var_tracking = opts->x_flag_var_tracking_assignments = -1;
 
-  if (flag_var_tracking_assignments
-      && (flag_selective_scheduling || flag_selective_scheduling2))
+  if (opts->x_flag_var_tracking_assignments
+      && (opts->x_flag_selective_scheduling
+	  || opts->x_flag_selective_scheduling2))
     warning_at (loc, 0,
 		"var-tracking-assignments changes selective scheduling");
 
-  if (flag_syntax_only)
+  if (opts->x_flag_syntax_only)
     {
-      write_symbols = NO_DEBUG;
-      profile_flag = 0;
+      opts->x_write_symbols = NO_DEBUG;
+      opts->x_profile_flag = 0;
     }
 
-  if (flag_gtoggle)
-    {
-      /* Make sure to process -gtoggle only once.  */
-      flag_gtoggle = false;
-      if (debug_info_level == DINFO_LEVEL_NONE)
-	{
-	  debug_info_level = DINFO_LEVEL_NORMAL;
-
-	  if (write_symbols == NO_DEBUG)
-	    write_symbols = PREFERRED_DEBUGGING_TYPE;
-	}
-      else
-	debug_info_level = DINFO_LEVEL_NONE;
-    }
-
-  if (!OPTION_SET_P (debug_nonbind_markers_p))
-    debug_nonbind_markers_p
-      = (optimize
-	 && debug_info_level >= DINFO_LEVEL_NORMAL
-	 && dwarf_debuginfo_p ()
-	 && !(flag_selective_scheduling || flag_selective_scheduling2));
 
   diagnose_options (opts, opts_set, loc);
 }
@@ -2017,6 +2058,7 @@ const struct sanitizer_opts_s sanitizer_opts[] =
   SANITIZER_OPT (vptr, SANITIZE_VPTR, true),
   SANITIZER_OPT (pointer-overflow, SANITIZE_POINTER_OVERFLOW, true),
   SANITIZER_OPT (builtin, SANITIZE_BUILTIN, true),
+  SANITIZER_OPT (shadow-call-stack, SANITIZE_SHADOW_CALL_STACK, false),
   SANITIZER_OPT (all, ~0U, true),
 #undef SANITIZER_OPT
   { NULL, 0U, 0UL, false }
@@ -2143,7 +2185,8 @@ parse_sanitizer_options (const char *p, location_t loc, int scode,
 		  }
 		else
 		  flags |= ~(SANITIZE_THREAD | SANITIZE_LEAK
-			     | SANITIZE_UNREACHABLE | SANITIZE_RETURN);
+			     | SANITIZE_UNREACHABLE | SANITIZE_RETURN
+			     | SANITIZE_SHADOW_CALL_STACK);
 	      }
 	    else if (value)
 	      {
@@ -2548,7 +2591,7 @@ common_handle_option (struct gcc_options *opts,
 	break;
 
       target_option_override_hook ();
-      print_specific_help (CL_TARGET, CL_UNDOCUMENTED, 0, opts, lang_mask);
+      print_specific_help (CL_TARGET, 0, 0, opts, lang_mask);
       opts->x_exit_after_options = true;
       break;
 
@@ -3600,7 +3643,7 @@ gen_command_line_string (cl_decoded_option *options,
       case OPT_SPECIAL_input_file:
       case OPT_grecord_gcc_switches:
       case OPT_frecord_gcc_switches:
-      case OPT__output_pch_:
+      case OPT__output_pch:
       case OPT_fdiagnostics_show_location_:
       case OPT_fdiagnostics_show_option:
       case OPT_fdiagnostics_show_caret:

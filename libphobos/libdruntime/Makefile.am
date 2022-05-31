@@ -39,7 +39,7 @@ ALL_DRUNTIME_INSTALL_DSOURCES = $(DRUNTIME_DSOURCES) \
 	$(DRUNTIME_DSOURCES_OPENBSD) $(DRUNTIME_DSOURCES_POSIX) \
 	$(DRUNTIME_DSOURCES_SOLARIS) $(DRUNTIME_DSOURCES_WINDOWS) \
 	$(DRUNTIME_DSOURCES_GENERATED) $(DRUNTIME_DISOURCES) \
-	$(DRUNTIME_DSOURCES_STDCXX)
+	$(DRUNTIME_DSOURCES_ELF) $(DRUNTIME_DSOURCES_STDCXX)
 
 # Setup source files depending on configure
 DRUNTIME_SOURCES_CONFIGURED =
@@ -120,7 +120,7 @@ endif
 DRUNTIME_DSOURCES_GENERATED = gcc/config.d gcc/libbacktrace.d
 
 ALL_DRUNTIME_SOURCES = $(DRUNTIME_DSOURCES) $(DRUNTIME_CSOURCES) \
-	$(DRUNTIME_DSOURCES_STDCXX) \
+	$(DRUNTIME_DSOURCES_ELF) $(DRUNTIME_DSOURCES_STDCXX) \
 	$(DRUNTIME_SOURCES_CONFIGURED) $(DRUNTIME_DSOURCES_GENERATED)
 
 # Need this library to both be part of libgphobos.a, and installed separately.
@@ -170,7 +170,7 @@ DRUNTIME_CSOURCES = core/stdc/errno_.c
 DRUNTIME_DSOURCES = core/atomic.d core/attribute.d core/bitop.d \
 	core/builtins.d core/checkedint.d core/cpuid.d core/demangle.d \
 	core/exception.d core/gc/config.d core/gc/gcinterface.d \
-	core/gc/registry.d core/internal/abort.d \
+	core/gc/registry.d core/int128.d core/internal/abort.d \
 	core/internal/array/appending.d core/internal/array/capacity.d \
 	core/internal/array/casting.d core/internal/array/comparison.d \
 	core/internal/array/concatenation.d core/internal/array/construction.d \
@@ -253,6 +253,8 @@ DRUNTIME_DSOURCES_DRAGONFLYBSD = core/sys/dragonflybsd/dlfcn.d \
 	core/sys/dragonflybsd/sys/mman.d core/sys/dragonflybsd/sys/socket.d \
 	core/sys/dragonflybsd/sys/sysctl.d core/sys/dragonflybsd/time.d
 
+DRUNTIME_DSOURCES_ELF = core/sys/elf/package.d
+
 DRUNTIME_DSOURCES_FREEBSD = core/sys/freebsd/config.d \
 	core/sys/freebsd/dlfcn.d core/sys/freebsd/err.d \
 	core/sys/freebsd/execinfo.d core/sys/freebsd/netinet/in_.d \
@@ -294,13 +296,13 @@ DRUNTIME_DSOURCES_NETBSD = core/sys/netbsd/dlfcn.d \
 
 DRUNTIME_DSOURCES_OPENBSD = core/sys/openbsd/dlfcn.d \
 	core/sys/openbsd/err.d core/sys/openbsd/execinfo.d \
-	core/sys/openbsd/pthread_np.d core/sys/openbsd/stdlib.d \
-	core/sys/openbsd/string.d core/sys/openbsd/sys/cdefs.d \
-	core/sys/openbsd/sys/elf.d core/sys/openbsd/sys/elf32.d \
-	core/sys/openbsd/sys/elf64.d core/sys/openbsd/sys/elf_common.d \
-	core/sys/openbsd/sys/link_elf.d core/sys/openbsd/sys/mman.d \
-	core/sys/openbsd/sys/sysctl.d core/sys/openbsd/time.d \
-	core/sys/openbsd/unistd.d
+	core/sys/openbsd/pthread_np.d core/sys/openbsd/pwd.d \
+	core/sys/openbsd/stdlib.d core/sys/openbsd/string.d \
+	core/sys/openbsd/sys/cdefs.d core/sys/openbsd/sys/elf.d \
+	core/sys/openbsd/sys/elf32.d core/sys/openbsd/sys/elf64.d \
+	core/sys/openbsd/sys/elf_common.d core/sys/openbsd/sys/link_elf.d \
+	core/sys/openbsd/sys/mman.d core/sys/openbsd/sys/sysctl.d \
+	core/sys/openbsd/time.d core/sys/openbsd/unistd.d
 
 DRUNTIME_DSOURCES_POSIX = core/sys/posix/aio.d \
 	core/sys/posix/arpa/inet.d core/sys/posix/config.d \
@@ -425,4 +427,4 @@ DRUNTIME_DSOURCES_WINDOWS = core/sys/windows/accctrl.d \
 	core/sys/windows/winuser.d core/sys/windows/winver.d \
 	core/sys/windows/wtsapi32.d core/sys/windows/wtypes.d
 
-DRUNTIME_DISOURCES = __main.di
+DRUNTIME_DISOURCES = __builtins.di __main.di

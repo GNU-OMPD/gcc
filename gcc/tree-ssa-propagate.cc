@@ -27,10 +27,10 @@
 #include "ssa.h"
 #include "gimple-pretty-print.h"
 #include "dumpfile.h"
+#include "gimple-iterator.h"
 #include "gimple-fold.h"
 #include "tree-eh.h"
 #include "gimplify.h"
-#include "gimple-iterator.h"
 #include "tree-cfg.h"
 #include "tree-ssa.h"
 #include "tree-ssa-propagate.h"
@@ -697,7 +697,7 @@ private:
 				 gimple_stmt_iterator new_gsi);
 };
 
-/* Call post_new_stmt for each each new statement that has been added
+/* Call post_new_stmt for each new statement that has been added
    to the current BB.  OLD_GSI is the statement iterator before the BB
    changes ocurred.  NEW_GSI is the iterator which may contain new
    statements.  */

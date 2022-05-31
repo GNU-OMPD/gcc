@@ -228,13 +228,25 @@ OMP_5.1 {
 
 OMP_5.0.3 {
   global:
-  	ompd_dll_locations;
-  	ompd_dll_locations_valid;
-  	ompd_bp_parallel_begin;
-  	ompd_bp_parallel_end;
-  local:
-  	*;
-}OMP_5.0.2;
+	ompd_dll_locations;
+	ompd_dll_locations_valid;
+	ompd_bp_parallel_begin;
+	ompd_bp_parallel_end;
+	ompd_bp_task_begin;
+	ompd_bp_task_end;
+	ompd_bp_thread_begin;
+	ompd_bp_thread_end;
+	ompd_bp_device_begin;
+	ompd_bp_device_end;
+} OMP_5.1;
+
+OMP_5.1.1 {
+  global:
+	omp_get_mapped_ptr;
+	omp_target_is_accessible;
+	omp_target_memcpy_async;
+	omp_target_memcpy_rect_async;
+} OMP_5.1;
 
 GOMP_1.0 {
   global:

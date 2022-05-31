@@ -132,7 +132,7 @@ pop_alignment (tree id)
    #pragma pack (pop)
    #pragma pack (pop, ID) */
 static void
-handle_pragma_pack (cpp_reader * ARG_UNUSED (dummy))
+handle_pragma_pack (cpp_reader *)
 {
   location_t loc;
   tree x, id = 0;
@@ -355,7 +355,7 @@ maybe_apply_pending_pragma_weaks (void)
 
 /* #pragma weak name [= value] */
 static void
-handle_pragma_weak (cpp_reader * ARG_UNUSED (dummy))
+handle_pragma_weak (cpp_reader *)
 {
   tree name, value, x, decl;
   enum cpp_ttype t;
@@ -418,7 +418,7 @@ maybe_apply_pragma_scalar_storage_order (tree type)
 }
 
 static void
-handle_pragma_scalar_storage_order (cpp_reader *ARG_UNUSED(dummy))
+handle_pragma_scalar_storage_order (cpp_reader *)
 {
   const char *kind_string;
   enum cpp_ttype token;
@@ -499,7 +499,7 @@ static void handle_pragma_redefine_extname (cpp_reader *);
 
 /* #pragma redefine_extname oldname newname */
 static void
-handle_pragma_redefine_extname (cpp_reader * ARG_UNUSED (dummy))
+handle_pragma_redefine_extname (cpp_reader *)
 {
   tree oldname, newname, decls, x;
   enum cpp_ttype t;
@@ -721,7 +721,7 @@ pop_visibility (int kind)
    specified on the command line.  */
 
 static void
-handle_pragma_visibility (cpp_reader *dummy ATTRIBUTE_UNUSED)
+handle_pragma_visibility (cpp_reader *)
 {
   /* Form is #pragma GCC visibility push(hidden)|pop */
   tree x;
@@ -765,7 +765,7 @@ handle_pragma_visibility (cpp_reader *dummy ATTRIBUTE_UNUSED)
 }
 
 static void
-handle_pragma_diagnostic(cpp_reader *ARG_UNUSED(dummy))
+handle_pragma_diagnostic(cpp_reader *)
 {
   tree x;
   location_t loc;
@@ -899,7 +899,7 @@ handle_pragma_diagnostic(cpp_reader *ARG_UNUSED(dummy))
 
 /*  Parse #pragma GCC target (xxx) to set target specific options.  */
 static void
-handle_pragma_target(cpp_reader *ARG_UNUSED(dummy))
+handle_pragma_target(cpp_reader *)
 {
   location_t loc;
   enum cpp_ttype token;
@@ -971,7 +971,7 @@ handle_pragma_target(cpp_reader *ARG_UNUSED(dummy))
 
 /* Handle #pragma GCC optimize to set optimization options.  */
 static void
-handle_pragma_optimize (cpp_reader *ARG_UNUSED(dummy))
+handle_pragma_optimize (cpp_reader *)
 {
   enum cpp_ttype token;
   tree x;
@@ -1057,7 +1057,7 @@ static GTY(()) struct opt_stack * options_stack;
    options.  */
 
 static void
-handle_pragma_push_options (cpp_reader *ARG_UNUSED(dummy))
+handle_pragma_push_options (cpp_reader *)
 {
   enum cpp_ttype token;
   tree x = 0;
@@ -1093,7 +1093,7 @@ handle_pragma_push_options (cpp_reader *ARG_UNUSED(dummy))
    optimization options from a previous push_options.  */
 
 static void
-handle_pragma_pop_options (cpp_reader *ARG_UNUSED(dummy))
+handle_pragma_pop_options (cpp_reader *)
 {
   enum cpp_ttype token;
   tree x = 0;
@@ -1150,7 +1150,7 @@ handle_pragma_pop_options (cpp_reader *ARG_UNUSED(dummy))
    optimization options to the original options used on the command line.  */
 
 static void
-handle_pragma_reset_options (cpp_reader *ARG_UNUSED(dummy))
+handle_pragma_reset_options (cpp_reader *)
 {
   enum cpp_ttype token;
   tree x = 0;
@@ -1186,7 +1186,7 @@ handle_pragma_reset_options (cpp_reader *ARG_UNUSED(dummy))
 /* Print a plain user-specified message.  */
 
 static void
-handle_pragma_message (cpp_reader *ARG_UNUSED(dummy))
+handle_pragma_message (cpp_reader *)
 {
   location_t loc;
   enum cpp_ttype token;
@@ -1291,7 +1291,7 @@ handle_stdc_pragma (const char *pname)
    #pragma STDC FLOAT_CONST_DECIMAL64 DEFAULT */
 
 static void
-handle_pragma_float_const_decimal64 (cpp_reader *ARG_UNUSED (dummy))
+handle_pragma_float_const_decimal64 (cpp_reader *)
 {
   if (c_dialect_cxx ())
     {
@@ -1400,8 +1400,8 @@ static const struct omp_pragma_def omp_pragmas_simd[] = {
 void
 c_pp_lookup_pragma (unsigned int id, const char **space, const char **name)
 {
-  const int n_oacc_pragmas = sizeof (oacc_pragmas) / sizeof (*oacc_pragmas);
-  const int n_omp_pragmas = sizeof (omp_pragmas) / sizeof (*omp_pragmas);
+  const int n_oacc_pragmas = ARRAY_SIZE (oacc_pragmas);
+  const int n_omp_pragmas = ARRAY_SIZE (omp_pragmas);
   const int n_omp_pragmas_simd = sizeof (omp_pragmas_simd)
 				 / sizeof (*omp_pragmas);
   int i;
@@ -1576,8 +1576,7 @@ init_pragma (void)
 {
   if (flag_openacc)
     {
-      const int n_oacc_pragmas
-	= sizeof (oacc_pragmas) / sizeof (*oacc_pragmas);
+      const int n_oacc_pragmas = ARRAY_SIZE (oacc_pragmas);
       int i;
 
       for (i = 0; i < n_oacc_pragmas; ++i)
@@ -1587,7 +1586,7 @@ init_pragma (void)
 
   if (flag_openmp)
     {
-      const int n_omp_pragmas = sizeof (omp_pragmas) / sizeof (*omp_pragmas);
+      const int n_omp_pragmas = ARRAY_SIZE (omp_pragmas);
       int i;
 
       for (i = 0; i < n_omp_pragmas; ++i)

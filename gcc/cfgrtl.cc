@@ -235,7 +235,7 @@ delete_insn_and_edges (rtx_insn *insn)
 {
   bool purge = false;
 
-  if (INSN_P (insn) && BLOCK_FOR_INSN (insn))
+  if (NONDEBUG_INSN_P (insn) && BLOCK_FOR_INSN (insn))
     {
       basic_block bb = BLOCK_FOR_INSN (insn);
       if (BB_END (bb) == insn)
@@ -4090,7 +4090,7 @@ fixup_reorder_chain (void)
 		     && (!NONDEBUG_INSN_P (insn) || !INSN_HAS_LOCATION (insn)))
 		insn = PREV_INSN (insn);
 	      if (insn != end
-		  && INSN_LOCATION (insn) == e->goto_locus)
+		  && loc_equal (INSN_LOCATION (insn), e->goto_locus))
 		continue;
 	      if (simplejump_p (BB_END (e->src))
 		  && !INSN_HAS_LOCATION (BB_END (e->src)))
@@ -4112,7 +4112,7 @@ fixup_reorder_chain (void)
 		  while (insn != end && !NONDEBUG_INSN_P (insn))
 		    insn = NEXT_INSN (insn);
 		  if (insn != end && INSN_HAS_LOCATION (insn)
-		      && INSN_LOCATION (insn) == e->goto_locus)
+		      && loc_equal (INSN_LOCATION (insn), e->goto_locus))
 		    continue;
 		}
 	      nb = split_edge (e);

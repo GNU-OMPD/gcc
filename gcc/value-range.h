@@ -71,9 +71,8 @@ public:
   bool contains_p (tree) const;
 
   // In-place operators.
-  void union_ (const irange &);
-  void intersect (const irange &);
-  void intersect (const wide_int& lb, const wide_int& ub);
+  bool union_ (const irange &);
+  bool intersect (const irange &);
   void invert ();
 
   // Operator overloads.
@@ -97,8 +96,8 @@ public:
   bool may_contain_p (tree) const;		// DEPRECATED
   void set (tree);				// DEPRECATED
   bool equal_p (const irange &) const;		// DEPRECATED
-  void union_ (const class irange *);		// DEPRECATED
-  void intersect (const irange *);		// DEPRECATED
+  bool legacy_verbose_union_ (const class irange *);	// DEPRECATED
+  bool legacy_verbose_intersect (const irange *);	// DEPRECATED
 
 protected:
   irange (tree *, unsigned);
@@ -108,10 +107,12 @@ protected:
   tree tree_upper_bound () const;
 
    // In-place operators.
-  void irange_union (const irange &);
-  void irange_intersect (const irange &);
+  bool irange_union (const irange &);
+  bool irange_intersect (const irange &);
   void irange_set (tree, tree);
   void irange_set_anti_range (tree, tree);
+  bool irange_contains_p (const irange &) const;
+  bool irange_single_pair_union (const irange &r);
 
   void normalize_kind ();
 
@@ -135,6 +136,7 @@ private:
   void irange_set_1bit_anti_range (tree, tree);
   bool varying_compatible_p () const;
 
+  bool intersect (const wide_int& lb, const wide_int& ub);
   unsigned char m_num_ranges;
   unsigned char m_max_ranges;
   ENUM_BITFIELD(value_range_kind) m_kind : 8;
@@ -397,9 +399,8 @@ inline
 irange::irange (tree *base, unsigned nranges)
 {
   m_base = base;
-  m_num_ranges = 0;
   m_max_ranges = nranges;
-  m_kind = VR_UNDEFINED;
+  set_undefined ();
 }
 
 // Constructors for int_range<>.
@@ -545,22 +546,24 @@ irange::upper_bound () const
   return upper_bound (pairs - 1);
 }
 
-inline void
+inline bool
 irange::union_ (const irange &r)
 {
   dump_flags_t m_flags = dump_flags;
   dump_flags &= ~TDF_DETAILS;
-  irange::union_ (&r);
+  bool ret = irange::legacy_verbose_union_ (&r);
   dump_flags = m_flags;
+  return ret;
 }
 
-inline void
+inline bool
 irange::intersect (const irange &r)
 {
   dump_flags_t m_flags = dump_flags;
   dump_flags &= ~TDF_DETAILS;
-  irange::intersect (&r);
+  bool ret = irange::legacy_verbose_intersect (&r);
   dump_flags = m_flags;
+  return ret;
 }
 
 // Set value range VR to a nonzero range of type TYPE.

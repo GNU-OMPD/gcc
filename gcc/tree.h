@@ -75,6 +75,55 @@ as_internal_fn (combined_fn code)
   return internal_fn (int (code) - int (END_BUILTINS));
 }
 
+/* Helper to transparently allow tree codes and builtin function codes
+   exist in one storage entity.  */
+class code_helper
+{
+public:
+  code_helper () {}
+  code_helper (tree_code code) : rep ((int) code) {}
+  code_helper (combined_fn fn) : rep (-(int) fn) {}
+  code_helper (internal_fn fn) : rep (-(int) as_combined_fn (fn)) {}
+  explicit operator tree_code () const { return (tree_code) rep; }
+  explicit operator combined_fn () const { return (combined_fn) -rep; }
+  explicit operator internal_fn () const;
+  explicit operator built_in_function () const;
+  bool is_tree_code () const { return rep > 0; }
+  bool is_fn_code () const { return rep < 0; }
+  bool is_internal_fn () const;
+  bool is_builtin_fn () const;
+  int get_rep () const { return rep; }
+  bool operator== (const code_helper &other) { return rep == other.rep; }
+  bool operator!= (const code_helper &other) { return rep != other.rep; }
+  bool operator== (tree_code c) { return rep == code_helper (c).rep; }
+  bool operator!= (tree_code c) { return rep != code_helper (c).rep; }
+
+private:
+  int rep;
+};
+
+inline code_helper::operator internal_fn () const
+{
+  return as_internal_fn (combined_fn (*this));
+}
+
+inline code_helper::operator built_in_function () const
+{
+  return as_builtin_fn (combined_fn (*this));
+}
+
+inline bool
+code_helper::is_internal_fn () const
+{
+  return is_fn_code () && internal_fn_p (combined_fn (*this));
+}
+
+inline bool
+code_helper::is_builtin_fn () const
+{
+  return is_fn_code () && builtin_fn_p (combined_fn (*this));
+}
+
 /* Macros for initializing `tree_contains_struct'.  */
 #define MARK_TS_BASE(C)					\
   (tree_contains_struct[C][TS_BASE] = true)
@@ -787,6 +836,12 @@ extern void omp_clause_range_check_failed (const_tree, const char *, int,
 #define SWITCH_BREAK_LABEL_P(NODE) \
   (LABEL_DECL_CHECK (NODE)->base.protected_flag)
 
+/* Set on label that is known not to be jumped to, it can be only
+   reached by falling through from previous statements.
+   This is used to implement -Wimplicit-fallthrough.  */
+#define UNUSED_LABEL_P(NODE) \
+  (LABEL_DECL_CHECK (NODE)->base.default_def_flag)
+
 /* Nonzero means this expression is volatile in the C sense:
    its address should be of type `volatile WHATEVER *'.
    In other words, the declared item is volatile qualified.
@@ -1042,7 +1097,7 @@ extern void omp_clause_range_check_failed (const_tree, const char *, int,
 #define POLY_INT_CST_COEFF(NODE, I) \
   (POLY_INT_CST_CHECK (NODE)->poly_int_cst.coeffs[I])
 
-#define TREE_REAL_CST_PTR(NODE) (REAL_CST_CHECK (NODE)->real_cst.real_cst_ptr)
+#define TREE_REAL_CST_PTR(NODE) (&REAL_CST_CHECK (NODE)->real_cst.value)
 #define TREE_REAL_CST(NODE) (*TREE_REAL_CST_PTR (NODE))
 
 #define TREE_FIXED_CST_PTR(NODE) \
@@ -1080,6 +1135,7 @@ extern void omp_clause_range_check_failed (const_tree, const char *, int,
 
 /* Define fields and accessors for some special-purpose tree nodes.  */
 
+/* As with STRING_CST, in C terms this is sizeof, not strlen.  */
 #define IDENTIFIER_LENGTH(NODE) \
   (IDENTIFIER_NODE_CHECK (NODE)->identifier.id.len)
 #define IDENTIFIER_POINTER(NODE) \
@@ -1100,8 +1156,9 @@ extern void omp_clause_range_check_failed (const_tree, const char *, int,
 
 /* In a TREE_VEC node.  */
 #define TREE_VEC_LENGTH(NODE) (TREE_VEC_CHECK (NODE)->base.u.length)
+#define TREE_VEC_BEGIN(NODE) (&TREE_VEC_CHECK (NODE)->vec.a[0])
 #define TREE_VEC_END(NODE) \
-  ((void) TREE_VEC_CHECK (NODE), &((NODE)->vec.a[(NODE)->vec.base.u.length]))
+  ((void) TREE_VEC_CHECK (NODE), &((NODE)->vec.a[(NODE)->base.u.length]))
 
 #define TREE_VEC_ELT(NODE,I) TREE_VEC_ELT_CHECK (NODE, I)
 
@@ -1698,6 +1755,11 @@ class auto_suppress_location_wrappers
    NOTE: this is different than OMP_CLAUSE_MAP_IMPLICIT.  */
 #define OMP_CLAUSE_MAP_RUNTIME_IMPLICIT_P(NODE) \
   (OMP_CLAUSE_SUBCODE_CHECK (NODE, OMP_CLAUSE_MAP)->base.deprecated_flag)
+
+/* Flag that 'OMP_CLAUSE_DECL (NODE)' is to be made addressable during OMP
+   lowering.  */
+#define OMP_CLAUSE_MAP_DECL_MAKE_ADDRESSABLE(NODE) \
+  (OMP_CLAUSE_SUBCODE_CHECK (NODE, OMP_CLAUSE_MAP)->base.addressable_flag)
 
 /* True on an OMP_CLAUSE_USE_DEVICE_PTR with an OpenACC 'if_present'
    clause.  */
@@ -4469,6 +4531,18 @@ extern tree make_tree_vec (int CXX_MEM_STAT_INFO);
 
 extern tree grow_tree_vec (tree v, int CXX_MEM_STAT_INFO);
 
+/* Treat a TREE_VEC as a range of trees, e.g.
+   for (tree e : tree_vec_range (v)) { ... }  */
+
+class tree_vec_range
+{
+  tree v;
+public:
+  tree_vec_range(tree v) : v(v) { }
+  tree *begin() { return TREE_VEC_BEGIN (v); }
+  tree *end() { return TREE_VEC_END (v); }
+};
+
 /* Construct various types of nodes.  */
 
 extern tree build_nt (enum tree_code, ...);
@@ -5389,6 +5463,7 @@ extern bool real_minus_onep (const_tree);
 extern void init_ttree (void);
 extern void build_common_tree_nodes (bool);
 extern void build_common_builtin_nodes (void);
+extern void tree_cc_finalize (void);
 extern tree build_nonstandard_integer_type (unsigned HOST_WIDE_INT, int);
 extern tree build_nonstandard_boolean_type (unsigned HOST_WIDE_INT);
 extern tree build_range_type (tree, tree, tree);
@@ -6578,5 +6653,7 @@ extern unsigned fndecl_dealloc_argno (tree);
    if nonnull, set the second argument to the referenced enclosing
    object or pointer.  Otherwise return null.  */
 extern tree get_attr_nonstring_decl (tree, tree * = NULL);
+
+extern int get_target_clone_attr_len (tree);
 
 #endif  /* GCC_TREE_H  */

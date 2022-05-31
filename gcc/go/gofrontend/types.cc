@@ -2513,13 +2513,18 @@ Type::type_descriptor_constructor(Gogo* gogo, int runtime_type_kind,
   Expression_list* vals = new Expression_list();
   vals->reserve(12);
 
-  if (!this->has_pointer())
+  bool has_pointer;
+  if (name != NULL)
+    has_pointer = name->has_pointer();
+  else
+    has_pointer = this->has_pointer();
+  if (!has_pointer)
     runtime_type_kind |= RUNTIME_TYPE_KIND_NO_POINTERS;
   if (this->is_direct_iface_type())
     runtime_type_kind |= RUNTIME_TYPE_KIND_DIRECT_IFACE;
   int64_t ptrsize;
   int64_t ptrdata;
-  if (this->needs_gcprog(gogo, &ptrsize, &ptrdata))
+  if (has_pointer && this->needs_gcprog(gogo, &ptrsize, &ptrdata))
     runtime_type_kind |= RUNTIME_TYPE_KIND_GC_PROG;
 
   Struct_field_list::const_iterator p = fields->begin();
@@ -2530,7 +2535,10 @@ Type::type_descriptor_constructor(Gogo* gogo, int runtime_type_kind,
   ++p;
   go_assert(p->is_field_name("ptrdata"));
   type_info = Expression::TYPE_INFO_DESCRIPTOR_PTRDATA;
-  vals->push_back(Expression::make_type_info(this, type_info));
+  if (has_pointer)
+    vals->push_back(Expression::make_type_info(this, type_info));
+  else
+    vals->push_back(Expression::make_integer_ul(0, p->type(), bloc));
 
   ++p;
   go_assert(p->is_field_name("hash"));
@@ -2576,7 +2584,12 @@ Type::type_descriptor_constructor(Gogo* gogo, int runtime_type_kind,
 
   ++p;
   go_assert(p->is_field_name("gcdata"));
-  vals->push_back(Expression::make_gc_symbol(this));
+  if (has_pointer)
+    vals->push_back(Expression::make_gc_symbol(this));
+  else
+    vals->push_back(Expression::make_cast(p->type(),
+					  Expression::make_nil(bloc),
+					  bloc));
 
   ++p;
   go_assert(p->is_field_name("string"));
@@ -2803,6 +2816,9 @@ class Ptrmask
 void
 Ptrmask::set_from(Gogo* gogo, Type* type, int64_t ptrsize, int64_t offset)
 {
+  if (!type->has_pointer())
+    return;
+
   switch (type->base()->classification())
     {
     default:
@@ -2845,9 +2861,6 @@ Ptrmask::set_from(Gogo* gogo, Type* type, int64_t ptrsize, int64_t offset)
 
     case Type::TYPE_STRUCT:
       {
-	if (!type->has_pointer())
-	  return;
-
 	const Struct_field_list* fields = type->struct_type()->fields();
 	int64_t soffset = 0;
 	for (Struct_field_list::const_iterator pf = fields->begin();
@@ -2885,9 +2898,6 @@ Ptrmask::set_from(Gogo* gogo, Type* type, int64_t ptrsize, int64_t offset)
 	}
       else
 	{
-	  if (!type->has_pointer())
-	    return;
-
 	  int64_t len;
 	  if (!type->array_type()->int_length(&len))
 	    {
@@ -5293,7 +5303,7 @@ Function_type::do_export(Export* exp) const
   if (results != NULL)
     {
       exp->write_c_string(" ");
-      if (results->size() == 1 && results->begin()->name().empty())
+      if (results->size() == 1)
 	exp->write_type(results->begin()->type());
       else
 	{
@@ -7805,7 +7815,7 @@ Array_type::finish_backend_element(Gogo* gogo)
 // Return an expression for a pointer to the values in ARRAY.
 
 Expression*
-Array_type::get_value_pointer(Gogo*, Expression* array, bool is_lvalue) const
+Array_type::get_value_pointer(Gogo*, Expression* array) const
 {
   if (this->length() != NULL)
     {
@@ -7818,25 +7828,6 @@ Array_type::get_value_pointer(Gogo*, Expression* array, bool is_lvalue) const
     }
 
   // Slice.
-
-  if (is_lvalue)
-    {
-      Temporary_reference_expression* tref =
-          array->temporary_reference_expression();
-      Var_expression* ve = array->var_expression();
-      if (tref != NULL)
-        {
-          tref = tref->copy()->temporary_reference_expression();
-          tref->set_is_lvalue();
-          array = tref;
-        }
-      else if (ve != NULL)
-        {
-          ve = new Var_expression(ve->named_object(), ve->location());
-          array = ve;
-        }
-    }
-
   return Expression::make_slice_info(array,
                                      Expression::SLICE_INFO_VALUE_POINTER,
                                      array->location());
@@ -9040,6 +9031,9 @@ Interface_type::finalize_methods()
   if (this->parse_methods_ == NULL)
     return;
 
+  // The exporter uses parse_methods_.
+  this->parse_methods_->sort_by_name();
+
   this->all_methods_ = new Typed_identifier_list();
   this->all_methods_->reserve(this->parse_methods_->size());
   Typed_identifier_list inherit;
@@ -9327,15 +9321,17 @@ Interface_type::is_compatible_for_assign(const Interface_type* t,
 // Hash code.
 
 unsigned int
-Interface_type::do_hash_for_method(Gogo*, int) const
+Interface_type::do_hash_for_method(Gogo*, int flags) const
 {
   go_assert(this->methods_are_finalized_);
+  Typed_identifier_list* methods = (((flags & COMPARE_EMBEDDED_INTERFACES) != 0)
+				    ? this->parse_methods_
+				    : this->all_methods_);
   unsigned int ret = 0;
-  if (this->all_methods_ != NULL)
+  if (methods != NULL)
     {
-      for (Typed_identifier_list::const_iterator p =
-	     this->all_methods_->begin();
-	   p != this->all_methods_->end();
+      for (Typed_identifier_list::const_iterator p = methods->begin();
+	   p != methods->end();
 	   ++p)
 	{
 	  ret = Gogo::hash_string(p->name(), ret);
@@ -10894,6 +10890,10 @@ Named_type::do_verify()
 bool
 Named_type::do_has_pointer() const
 {
+  // A type that is not in the heap has no pointers that we care about.
+  if (!this->in_heap_)
+    return false;
+
   if (this->seen_)
     return false;
   this->seen_ = true;

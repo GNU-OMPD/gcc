@@ -1935,9 +1935,7 @@ fatal_error (location_t loc, const char *gmsgid, ...)
 }
 
 /* An internal consistency check has failed.  We make no attempt to
-   continue.  Note that unless there is debugging value to be had from
-   a more specific message, or some other good reason, you should use
-   abort () instead of calling this function directly.  */
+   continue.  */
 void
 internal_error (const char *gmsgid, ...)
 {
@@ -2472,7 +2470,7 @@ test_num_digits ()
 /* Run all of the selftests within this file.  */
 
 void
-diagnostic_cc_tests ()
+c_diagnostic_cc_tests ()
 {
   test_print_escaped_string ();
   test_print_parseable_fixits_none ();

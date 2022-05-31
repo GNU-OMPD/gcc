@@ -13532,8 +13532,7 @@ static const dwarf_qual_info_t dwarf_qual_info[] =
   { TYPE_QUAL_RESTRICT, DW_TAG_restrict_type },
   { TYPE_QUAL_ATOMIC, DW_TAG_atomic_type }
 };
-static const unsigned int dwarf_qual_info_size
-  = sizeof (dwarf_qual_info) / sizeof (dwarf_qual_info[0]);
+static const unsigned int dwarf_qual_info_size = ARRAY_SIZE (dwarf_qual_info);
 
 /* If DIE is a qualified DIE of some base DIE with the same parent,
    return the base DIE, otherwise return NULL.  Set MASK to the
@@ -19449,6 +19448,14 @@ loc_list_from_tree_1 (tree loc, int want_address,
       break;
 
     case TRUTH_NOT_EXPR:
+      list_ret = loc_list_from_tree_1 (TREE_OPERAND (loc, 0), 0, context);
+      if (list_ret == 0)
+	return 0;
+
+      add_loc_descr_to_each (list_ret, new_loc_descr (DW_OP_lit0, 0, 0));
+      add_loc_descr_to_each (list_ret, new_loc_descr (DW_OP_eq, 0, 0));
+      break;
+
     case BIT_NOT_EXPR:
       op = DW_OP_not;
       goto do_unop;
@@ -19497,6 +19504,15 @@ loc_list_from_tree_1 (tree loc, int want_address,
 	  list_ret
 	    = loc_list_from_tree_1 (TREE_OPERAND (TREE_OPERAND (loc, 0), 0),
 				    0, context);
+	/* Likewise, swap the operands for a logically negated condition.  */
+	else if (TREE_CODE (TREE_OPERAND (loc, 0)) == TRUTH_NOT_EXPR)
+	  {
+	    lhs = loc_descriptor_from_tree (TREE_OPERAND (loc, 2), 0, context);
+	    rhs = loc_list_from_tree_1 (TREE_OPERAND (loc, 1), 0, context);
+	    list_ret
+	      = loc_list_from_tree_1 (TREE_OPERAND (TREE_OPERAND (loc, 0), 0),
+				      0, context);
+	  }
 	else
 	  list_ret = loc_list_from_tree_1 (TREE_OPERAND (loc, 0), 0, context);
 	if (list_ret == 0 || lhs == 0 || rhs == 0)
@@ -20431,7 +20447,10 @@ rtl_for_decl_init (tree init, tree type)
 	}
     }
   /* Other aggregates, and complex values, could be represented using
-     CONCAT: FIXME!  */
+     CONCAT: FIXME!
+     If this changes, please adjust tree_add_const_value_attribute
+     so that for early_dwarf it will for such initializers mangle referenced
+     decls.  */
   else if (AGGREGATE_TYPE_P (type)
 	   || (TREE_CODE (init) == VIEW_CONVERT_EXPR
 	       && AGGREGATE_TYPE_P (TREE_TYPE (TREE_OPERAND (init, 0))))
@@ -20881,6 +20900,19 @@ add_location_or_const_value_attribute (dw_die_ref die, tree decl, bool cache_p)
   return tree_add_const_value_attribute_for_decl (die, decl);
 }
 
+/* Mangle referenced decls.  */
+static tree
+mangle_referenced_decls (tree *tp, int *walk_subtrees, void *)
+{
+  if (! EXPR_P (*tp) && ! CONSTANT_CLASS_P (*tp))
+    *walk_subtrees = 0;
+
+  if (VAR_OR_FUNCTION_DECL_P (*tp))
+    assign_assembler_name_if_needed (*tp);
+
+  return NULL_TREE;
+}
+
 /* Attach a DW_AT_const_value attribute to DIE. The value of the
    attribute is the const value T.  */
 
@@ -20889,7 +20921,6 @@ tree_add_const_value_attribute (dw_die_ref die, tree t)
 {
   tree init;
   tree type = TREE_TYPE (t);
-  rtx rtl;
 
   if (!t || !TREE_TYPE (t) || TREE_TYPE (t) == error_mark_node)
     return false;
@@ -20910,11 +20941,26 @@ tree_add_const_value_attribute (dw_die_ref die, tree t)
 	  return true;
 	}
     }
-  /* Generate the RTL even if early_dwarf to force mangling of all refered to
-     symbols.  */
-  rtl = rtl_for_decl_init (init, type);
-  if (rtl && !early_dwarf)
-    return add_const_value_attribute (die, TYPE_MODE (type), rtl);
+  if (!early_dwarf)
+    {
+      rtx rtl = rtl_for_decl_init (init, type);
+      if (rtl)
+	return add_const_value_attribute (die, TYPE_MODE (type), rtl);
+    }
+  else
+    {
+      /* For early_dwarf force mangling of all referenced symbols.  */
+      tree initializer = init;
+      STRIP_NOPS (initializer);
+      /* rtl_for_decl_init punts on other aggregates, and complex values.  */
+      if (AGGREGATE_TYPE_P (type)
+	  || (TREE_CODE (initializer) == VIEW_CONVERT_EXPR
+	      && AGGREGATE_TYPE_P (TREE_TYPE (TREE_OPERAND (initializer, 0))))
+	  || TREE_CODE (type) == COMPLEX_TYPE)
+	;
+      else if (initializer_constant_valid_p (initializer, type))
+	walk_tree (&initializer, mangle_referenced_decls, NULL, NULL);
+    }
   /* If the host and target are sane, try harder.  */
   if (CHAR_BIT == 8 && BITS_PER_UNIT == 8
       && initializer_constant_valid_p (init, type))
