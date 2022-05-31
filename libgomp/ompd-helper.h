@@ -1,3 +1,4 @@
+
 /* Copyright (C) The GNU Toolchain Authors.
    Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
    This file is part of the GNU Offloading and Multi Processing Library
@@ -18,11 +19,14 @@
    see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
    <http://www.gnu.org/licenses/>.  */
 
+
 /* This file contains data types and declarations of functions that are not
    provided by the book but we find them necessary.  */
 
+
 #ifndef _OMPD_HELPER_H
 #define _OMPD_HELPER_H
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,6 +34,7 @@ extern "C" {
 
 #include "omp-tools.h"
 #include "ompd-types.h"
+
 #include "config.h"
 #include <assert.h>
 #include <stdio.h>
@@ -44,6 +49,7 @@ extern "C" {
 
 extern const ompd_callbacks_t *callbacks;
 extern __UINT64_TYPE__ gompd_state;
+
 extern ompd_device_type_sizes_t target_sizes;
 
 typedef struct _ompd_aspace_handle
@@ -195,8 +201,11 @@ ompd_rc_t gompd_stringize_gompd_enabled (ompd_address_space_handle_t *,
 #pragma GCC visibility pop
 #endif
 
+
 #ifdef __cplusplus
 } // extern C
 #endif
 
+
 #endif /* _OMPD_HELPER_H */
+

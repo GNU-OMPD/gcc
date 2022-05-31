@@ -36,6 +36,7 @@ libgompd.ver: $(top_srcdir)/libgompd.map
 	$(EGREP) -v '#(#| |$$)' $< | \
 	  $(PREPROCESS) -P -include config.h - > $@ || (rm -f $@ ; exit 1)
 
+
 if LIBGOMP_BUILD_VERSIONED_SHLIB_GNU
 libgomp_version_script = -Wl,--version-script,libgomp.ver
 libgompd_version_script = -Wl,--version-script,libgompd.ver
@@ -56,6 +57,7 @@ libgomp.ver-sun : libgomp.ver \
 	 `echo $(libgomp_la_LIBADD) | \
 	    sed 's,/\([^/.]*\)\.la,/.libs/\1.a,g'` \
 	 > $@ || (rm -f $@ ; exit 1)
+
 libgompd.ver-sun : libgompd.ver \
 		$(top_srcdir)/../contrib/make_sunver.pl \
 		$(libgompd_la_OBJECTS) $(libgompd_la_LIBADD)
@@ -65,6 +67,7 @@ libgompd.ver-sun : libgompd.ver \
 	 `echo $(libgompd_la_LIBADD) | \
 	    sed 's,/\([^/.]*\)\.la,/.libs/\1.a,g'` \
 	 > $@ || (rm -f $@ ; exit 1)
+
 endif
 else
 libgomp_version_script =
@@ -77,14 +80,15 @@ libgompd_version_info = -version-info $(libtool_VERSION)
 libgomp_la_LDFLAGS = $(libgomp_version_info) $(libgomp_version_script) \
         $(lt_host_flags)
 libgompd_la_LDFLAGS = $(libgompd_version_info) $(libgompd_version_script) \
+
         $(lt_host_flags)
 libgomp_la_LIBADD =
 libgompd_la_LIBADD =
+
 libgomp_la_DEPENDENCIES = $(libgomp_version_dep)
 libgompd_la_DEPENDENCIES = $(libgompd_version_dep)
 libgomp_la_LINK = $(LINK) $(libgomp_la_LDFLAGS)
 libgompd_la_LINK = $(LINK) $(libgompd_la_LDFLAGS)
-
 libgomp_la_SOURCES = alloc.c atomic.c barrier.c critical.c env.c error.c \
 	icv.c icv-device.c iter.c iter_ull.c loop.c loop_ull.c ordered.c \
 	parallel.c scope.c sections.c single.c task.c team.c work.c lock.c \
@@ -93,9 +97,10 @@ libgomp_la_SOURCES = alloc.c atomic.c barrier.c critical.c env.c error.c \
 	oacc-init.c oacc-mem.c oacc-async.c oacc-plugin.c oacc-cuda.c \
 	priority_queue.c affinity-fmt.c teams.c allocator.c oacc-profiling.c \
 	oacc-target.c ompd-support.c
-
 libgompd_la_SOURCES = ompd-init.c ompd-helper.c ompd-icv.c
 
+
+libgompd_la_SOURCES = ompd-init.c ompd-helper.c ompd-icv.c ompd-task.c
 include $(top_srcdir)/plugin/Makefrag.am
 
 if USE_FORTRAN

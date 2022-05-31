@@ -1517,6 +1517,7 @@ initialize_env (void)
 	= thread_limit_var > INT_MAX ? UINT_MAX : thread_limit_var;
     }
   parse_int_secure ("GOMP_DEBUG", &gomp_debug_var, true);
+
   parse_debug ("OMP_DEBUG", &gompd_enabled);
   if (gompd_enabled == 1)
     gompd_load ();

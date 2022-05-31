@@ -1,5 +1,6 @@
 OMPD_5.1 {
   global:
+
     ompd_initialize;
     ompd_get_api_version;
     ompd_get_version_string;
@@ -18,4 +19,5 @@ OMPD_5.1 {
     ompd_get_device_from_thread;
   local:
     *;
+
 };

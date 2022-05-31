@@ -1,3 +1,4 @@
+
 /* Copyright (C) The GNU Toolchain Authors.
    Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
    This file is part of the GNU Offloading and Multi Processing Library
@@ -18,19 +19,24 @@
    see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
    <http://www.gnu.org/licenses/>.  */
 
+
 /* This file contains the runtime support for gompd.  */
+
 
 #ifndef _OMPD_SUPPORT_H
 #define _OMPD_SUPPORT_H
 
 #include "omp-tools.h"
 #include "plugin-suffix.h"
+
 #include "libgomp.h"
 #include <pthread.h>
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stddef.h>
+
 
 #ifdef __ELF__
 #define ompd_dll_locations_valid() \
@@ -93,5 +99,6 @@ extern __UINT64_TYPE__ gompd_state;
 #ifdef HAVE_ATTRIBUTE_VISIBILITY
 #pragma GCC visibility pop
 #endif
+
 
 #endif /* _OMPD_SUPPORT_H */

@@ -1,3 +1,4 @@
+
 /* Copyright (C) The GNU Toolchain Authors.
    Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
    This file is part of the GNU Offloading and Multi Processing Library
@@ -181,4 +182,5 @@ ompd_get_icv_string_from_scope (void *handle, ompd_scope_t scope,
 	}
     }
   return ompd_rc_error;
+
 }

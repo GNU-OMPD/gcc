@@ -1,4 +1,6 @@
+
 /* Copyright (C) The GNU Toolchain Authors.
+
    Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
    This file is part of the GNU Offloading and Multi Processing Library
    (libgomp).
@@ -128,4 +130,5 @@ ompd_rel_address_space_handle (ompd_address_space_handle_t *handle)
 
   ompd_rc_t ret = callbacks->free_memory ((void *) handle);
   return ret;
+
 }

@@ -1,3 +1,4 @@
+
 /* Copyright (C) The GNU Toolchain Authors.
    Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
    This file is part of the GNU Offloading and Multi Processing Library
@@ -18,12 +19,15 @@
    see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
    <http://www.gnu.org/licenses/>.  */
 
+
 /* This file contains the source code of functions
    declared in ompd-helper.h.  */
+
 
 #include "ompd-helper.h"
 
 ompd_device_type_sizes_t target_sizes;
+
 
 /* Get global ICVs.  */
 ompd_rc_t
@@ -274,4 +278,5 @@ gompd_get_sizes (ompd_address_space_context_t *context)
 
   inited = true;
   return ret;
+
 }

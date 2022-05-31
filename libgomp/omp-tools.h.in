@@ -1,3 +1,4 @@
+
 /* Copyright (C) The GNU Toolchain Authors.
    Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
    This file is part of the GNU Offloading and Multi Processing Library
@@ -21,19 +22,24 @@
 /* This file contains data types and function declarations that
    that are defined in OMPD standard.  */
 
+
 #ifndef _OMP_TOOLS_H
 #define _OMP_TOOLS_H
 
 #ifdef __cplusplus
 extern "C" {
+
 #define __GOMPD_NOTHROW throw ()
 #else
 #define __GOMPD_NOTHROW __attribute__((__nothrow__))
+
 #endif
 
 extern const char **ompd_dll_locations;
 
+
 extern void ompd_dll_locations_valid (void) __GOMPD_NOTHROW;
+
 
 typedef __UINT64_TYPE__ ompd_size_t;
 typedef __UINT64_TYPE__ ompd_wait_id_t;
@@ -44,14 +50,18 @@ typedef __UINT64_TYPE__ ompd_seg_t;
 
 typedef struct ompd_address_t
 {
+
   ompd_seg_t segment;
   ompd_addr_t address;
+
 } ompd_address_t;
 
 typedef struct ompd_frame_info_t
 {
+
   ompd_address_t frame_address;
   ompd_word_t frame_flag;
+
 } ompd_frame_info_t;
 
 typedef __UINT64_TYPE__ ompd_device_t;
@@ -64,12 +74,14 @@ typedef struct _ompd_task_handle ompd_task_handle_t;
 
 typedef enum ompd_scope_t
 {
+
   ompd_scope_global = 1,
   ompd_scope_address_space = 2,
   ompd_scope_thread = 3,
   ompd_scope_parallel = 4,
   ompd_scope_implicit_task = 5,
   ompd_scope_task = 6
+
 } ompd_scope_t;
 
 typedef __UINT64_TYPE__ ompd_icv_id_t;
@@ -79,6 +91,7 @@ typedef struct _ompd_thread_cont ompd_thread_context_t;
 
 typedef enum ompd_rc_t
 {
+
   ompd_rc_ok = 0,
   ompd_rc_unavailable = 1,
   ompd_rc_stale_handle = 2,
@@ -92,11 +105,13 @@ typedef enum ompd_rc_t
   ompd_rc_nomem = 10,
   ompd_rc_incomplete = 11,
   ompd_rc_callback_error = 12
+
 } ompd_rc_t;
 
 
 typedef struct ompd_device_type_sizes_t
 {
+
   __UINT8_TYPE__ sizeof_char;
   __UINT8_TYPE__ sizeof_short;
   __UINT8_TYPE__ sizeof_int;
@@ -136,10 +151,12 @@ typedef ompd_rc_t (*ompd_callback_device_host_fn_t)
   (ompd_address_space_context_t *, const void *,
    ompd_size_t, ompd_size_t, void *);
 
+
 typedef ompd_rc_t (*ompd_callback_print_string_fn_t) (const char *, int);
 
 typedef struct ompd_callbacks_t
 {
+
   ompd_callback_memory_alloc_fn_t alloc_memory;
   ompd_callback_memory_free_fn_t free_memory;
   ompd_callback_print_string_fn_t print_string;
@@ -276,6 +293,7 @@ extern void ompd_bp_thread_end (void) __GOMPD_NOTHROW;
 
 extern void ompd_bp_device_begin (void) __GOMPD_NOTHROW;
 extern void ompd_bp_device_end (void) __GOMPD_NOTHROW;
+
 
 #define ompd_segment_none  ((ompd_seg_t) 0)
 #define ompd_icv_undefined ((ompd_icv_id_t) 0)
