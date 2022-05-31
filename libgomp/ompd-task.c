@@ -60,6 +60,15 @@ ompd_get_curr_task_handle( ompd_thread_handle_t *thread_handle,
 
 }
 
+/*
+   symbol_addr_lookup(*context,*thread_context,*symbol_name,*symbol_addr,*file_name)
+   read_memory(*context,*thread_context,*addr,nbytes,*buffer)
+   device_to_host(*context,*input,unit_size,count,*output)
+
+   alloc_memory(nbytes,**ptr)
+*/
+
+
 ompd_rc_t
 ompd_get_generating_task_handle( ompd_task_handle_t *task_handle,
    ompd_task_handle_t ** generating_task_handle)
@@ -76,28 +85,41 @@ ompd_get_generating_task_handle( ompd_task_handle_t *task_handle,
   if (!callbacks) 
       return ompd_rc_callback_error;
 
-   ompd_address_t *target_addr = task_handle->th ;
-   ompd_address_t *temp_parent_address ;
-   ompd_address_t *parent_address ;
+   ompd_address_t target_addr = task_handle->th;
+   ompd_address_t temp_offset = {OMPD_SEGMENT_UNSPECIFIED,0};
+   ompd_size_t parent_offset ,converted_offset;
+   
+   ompd_address_t parent_address ; 
+
 
    ompd_rc_t ret =  ompd_rc_stale_handle;
 // required: accessing the task that the *task_handle points to, to get the parent task
 // locate the address of that parent
 // make the *generating_task_handle points to that location.
 
-   //get the offset (address) of the parent task (gomp_task->parent) and store it in parent_address
-   ret = callbacks->symbol_addr_lookup(context, NULL, "parent", target_addr, NULL);
-   ret = callbacks->read_memory(context,NULL,target_addr,target_sizes.sizeof_long_long,temp_parent_address);
-	ret = callbacks->device_to_host(context, temp_parent_address, target_sizes.sizeof_long_long,1, parent_address);
+   //get the offset (address) of the parent task (gomp_task->parent), the final offset is stored in converted_offset 
+   char symbol_name[] = "ompd_access_gomp_task_parent"; 
+   ret = callbacks->symbol_addr_lookup(context, NULL, symbol_name, &temp_offset, NULL);
 
-   ompd_rc_t ret = callbacks->alloc_memory(sizeof(ompd_task_handle_t),
+   ret = callbacks->read_memory(context,NULL,&temp_offset,target_sizes.sizeof_long_long,&parent_offset);
+
+	ret = callbacks->device_to_host(context,&parent_offset, target_sizes.sizeof_long_long,1,&converted_offset);
+
+   //calculating the real address of the parent field in gomp_task:
+   parent_address.address = target_addr.address + converted_offset; 
+
+   //allocating memory for the generating_task_handle:
+   ret = callbacks->alloc_memory(sizeof(ompd_task_handle_t),
                                  (void **)(generating_task_handle));
 
    if (ret != ompd_rc_ok)
       return ret;
 
+   //assigning generating_task_handle fields' values:
+
    (*generating_task_handle)->th = parent_address;
    (*generating_task_handle)->ah = task_handle->ah;
+
    return ret;
 }
 /*
@@ -121,7 +143,7 @@ ompd_get_task_in_parallel(
 
    ompd_address_space_context_t *context = parallel_handle->ah->context;
 
-   ompd_address_t *target_addr = parallel_handle->th ; 
+   ompd_address_t target_addr = parallel_handle->th; 
    if (!context)
       return ompd_rc_stale_handle;
 
@@ -129,31 +151,35 @@ ompd_get_task_in_parallel(
     return ompd_rc_callback_error;
   
    ompd_rc_t ret ;
-   ompd_word_t team_threads ; //stores the number of threads of the input parallel handle
+   // ompd_word_t team_threads ; //stores the number of threads of the input parallel handle
    
-   ret = ompd_get_num_threads(parallel_handle, &team_threads);
-   if(ret != ompd_rc_ok){
-      return ret ;
-   }
-   //check if the input thread_num is in the range of 0 to team_threads
-   if(thread_num <= 0 || thread_num > team_threads){
-      return ompd_rc_bad_input ;
-   }
-
-   ompd_address_t *implicit_offset ; // stores the offset to get the location of gomp_team.implicit_task
-   ompd_address_t *implicit_task_address ; //stores the output reading of device to host operation
+   // ret = ompd_get_num_threads(parallel_handle, &team_threads);
+   // if(ret != ompd_rc_ok){
+   //    return ret ;
+   // }
+   // //check if the input thread_num is in the range of 0 to team_threads
+   // if(thread_num <= 0 || thread_num > team_threads){
+   //    return ompd_rc_bad_input ;
+   // }
+  
+   ompd_address_t temp_offset = {OMPD_SEGMENT_UNSPECIFIED,0};
+   ompd_size_t implicit_offset ,converted_offset; // stores the offset to get the location of gomp_team.implicit_task
+   ompd_address_t implicit_task_address ; //stores the output reading of device to host operation
    
    //looking up for implicit_task array in gomp_team
-   ret = callbacks->symbol_addr_lookup(context, NULL, "implicit_task", target_addr, NULL);
-   ret = callbacks->read_memory(context, NULL, target_addr, target_sizes.sizeof_long_long, implicit_offset);
-   ret = callbacks->device_to_host(context, NULL, target_sizes.sizeof_long_long,1, implicit_task_address);
+   char symbol_name[] = "implicit_task";
+   ret = callbacks->symbol_addr_lookup(context, NULL, symbol_name, &temp_offset, NULL);
+
+   ret = callbacks->read_memory(context, NULL, &temp_offset, target_sizes.sizeof_long_long, &implicit_offset);
+   
+   ret = callbacks->device_to_host(context,&implicit_offset, target_sizes.sizeof_long_long,1,&converted_offset);
 
    if(ret != ompd_rc_ok){
       return ret;
    }
 
-   // implicit_task_address is the address of the first element of the array 
-   target_addr->address = implicit_task_address + thread_num* target_sizes.sizeof_pointer ;//address of implicit_tasks[thread_num]
+   
+   implicit_task_address.address = (target_addr.address + converted_offset*thread_num);
 
    ret = callbacks->alloc_memory(sizeof(ompd_task_handle_t),
                                  (void **)(task_handle));
@@ -162,9 +188,10 @@ ompd_get_task_in_parallel(
       return ret;
    }
 
-   (*task_handle)->th = target_addr;
+   (*task_handle)->th = implicit_task_address;
    (*task_handle)->ah = parallel_handle->ah;
- 
+   
+   return ret ;
 }
 
 ompd_rc_t
@@ -179,4 +206,23 @@ ompd_rel_task_handle(
    if (ret != ompd_rc_ok)
       return ret;
   return ompd_rc_ok;
+}
+
+ompd_rc_t
+ompd_task_handle_compare(
+   ompd_task_handle_t *task_handle_1,
+   ompd_task_handle_t *task_handle_2,
+   int *cmp_value
+){
+   if (!task_handle_1)
+      return ompd_rc_stale_handle;
+   if (!task_handle_2)
+      return ompd_rc_stale_handle;
+   if (!cmp_value)
+      return ompd_rc_bad_input;
+
+   //get the start addresses of both handles and compare them together
+   *cmp_value = task_handle_1->th.address - task_handle_2->th.address ;
+
+   return ompd_rc_ok;
 }
