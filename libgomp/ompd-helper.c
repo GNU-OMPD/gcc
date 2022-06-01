@@ -280,3 +280,75 @@ gompd_get_sizes (ompd_address_space_context_t *context)
   return ret;
 
 }
+
+/* helper functions to get field from struct */
+
+void
+gompd_init_target_struct (ompd_address_space_context_t *context,
+    ompd_thread_context_t *tcontext, 
+    ompd_address_t *addr,
+    struct opmd_field_of_struct_t  *f)
+{
+  f.context = context ;
+  f.tcontext = tcontext ;
+  f.addr = *addr ; 
+}
+
+
+
+ompd_rc_t 
+gompd_get_field_offest (struct opmd_field_of_struct_t *f  )
+{
+  char *symbol_name = gompd_string_contact ("gompd_access_", 
+    f->struct_name  ,"_" , f->field_name) ; 
+  ompd_rc_t ret ; 
+  ompd_address_t addr = {f.addr.segment,0};
+  ompd_size_t temp_var ; 
+
+  GET_VALUE(f.context, f.tcontext, symbol_name, &f->offest,  &temp_var,
+    target_sizes.sizeof_long_long, 1, ret, &addr) ;
+
+  free(symbol_name) ; 
+  return ompd_rc_ok ;
+}
+
+ompd_rc_t 
+gompd_get_field_size (struct opmd_field_of_struct_t *f  )
+{
+  char *symbol_name = gompd_string_contact ("gompd_sizeof_", 
+    f->struct_name  ,"_" , f->field_name) ; 
+  ompd_rc_t ret ; 
+  ompd_address_t adddr = {f.segment,0};
+  ompd_size_t temp_var ; 
+
+  GET_VALUE(f.context, f.tcontext, symbol_name, &f->size,  &temp_var,
+    target_sizes.sizeof_long_long, 1, ret, &adddr) ;
+  
+  free(symbol_name) ; 
+  return ompd_rc_ok ; 
+}
+
+void 
+gompd_adresses (struct opmd_field_of_struct_t *f,
+    const char *type, const char *field)
+{
+  f.struct_name = type ;
+  f.field_name = field ;   
+  gompd_get_field_offest(f) ;
+  gompd_get_field_size(f) ;
+  f.addr.address = f.addr.address + f.offest ; 
+}
+
+/* a helper to function to contact some string*/
+char* 
+gompd_string_contact (const char* str1, const char* str2, const char* str3,
+   const char* str4 )
+{
+  char *result ;
+  result = malloc(strlen(str1) + strlen(str2)+ strlen(str3) + strlen(str4)+ 1);
+  strcpy(result, str1);
+  strcat(result, str2);
+  strcat(result, str3);
+  strcat(result, str4);
+  return result;
+}

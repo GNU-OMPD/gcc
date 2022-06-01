@@ -77,6 +77,24 @@ typedef struct _ompd_task_handle
   ompd_address_t th;
 } ompd_task_handle_t;
 
+/* a struct that define the address space and offest of value want ti get  */
+typedef struct opmd_field_of_struct 
+{
+    ompd_address_space_context_t *context ;
+    ompd_thread_context_t *tcontext ; 
+    /* the address of struct */ 
+    ompd_address_t addr; 
+    /* offest from struct address */ 
+    ompd_size_t offest ;
+    /* size of the field */
+    ompd_size_t size ;
+    char* struct_name ; 
+    char* field_name ; 
+   
+
+} opmd_field_of_struct_t ; 
+
+
 #define CHECK_RET(ret) \
  do { \
    if (ret != ompd_rc_ok) \
@@ -195,6 +213,17 @@ ompd_rc_t gompd_get_managed_threads (ompd_address_space_handle_t *,
 ompd_rc_t gompd_stringize_gompd_enabled (ompd_address_space_handle_t *,
                                          const char **);
 /*End of Global ICVs.  */
+
+/* helper function */ 
+void gompd_init_target_struct (ompd_address_space_context_t *,
+                    ompd_thread_context_t *,  ompd_address_t *,
+                    struct opmd_field_of_struct_t  * );
+ompd_rc_t gompd_get_field_offest (struct opmd_field_of_struct_t *  );
+ompd_rc_t gompd_get_field_size (struct opmd_field_of_struct_t *  ) ;
+void gompd_adresses (struct opmd_field_of_struct_t *,
+                    const char *, const char *);
+char* gompd_string_contact (const char* , const char* , const char* ,
+                    const char* );
 
 
 #ifdef HAVE_ATTRIBUTE_VISIBILITY

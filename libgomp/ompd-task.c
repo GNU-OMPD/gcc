@@ -33,28 +33,24 @@ ompd_get_curr_task_handle( ompd_thread_handle_t *thread_handle,
    if(thread_handle == NULL )
       return ompd_rc_bad_input ;
 
-   ompd_address_space_context_t *context = thread_handle->ah->context  ; 
-   ompd_thread_context_t *tcontext = thread_handle->thread_context ;   
-   if(context == NULL )
-      return ompd_rc_bad_input ;
+   CHECK(thread_handle->ah) ; 
    
-   // gomp_thread_pool[t]->task 
-   //  how to get the size 
-   ompd_addr_t task_address ; 
    ompd_rc_t ret = ompd_rc_ok ; 
 
-   GET_VALUE(context, tcontext, "task", task_address, task_address,
-		target_sizes.sizeof_long_long, 1, ret);
-   
+   struct opmd_field_of_struct_t *f ;
+   ret = gompd_init_target_struct (thread_handle->ah->context, 
+         thread_handle->thread_context, &(thread_handle->th), f) ; 
+   CHECK_RET(ret) ;
+   ret = gompd_adresses (f, "gomp_thread", "task");
+   CHECK_RET(ret) ; 
+
+   // allocate the handle 
    ret = callbacks->alloc_memory(sizeof(ompd_task_handle_t),
 			(void **)(task_handle));
-
-   if(ret != ompd_rc_ok)
-		return ret;
-
+   CHECK_RET(ret) ; 
 
    (*task_handle)->ah = thread_handle->ah ;
-   (*task_handle)->th = task_address ;
+   (*task_handle)->th = f->addr ;
 
    return ret;
 
@@ -226,3 +222,54 @@ ompd_task_handle_compare(
 
    return ompd_rc_ok;
 }
+
+
+
+// ompd_rc_t
+// ompd_get_task_function ( ompd_task_handle_t * task_handle,
+// 			 ompd_address_t * entry_point)
+// {
+// 	if(!task_handle || !task_handle->ah || !entry_point)
+// 		return ompd_rc_bad_input ;
+
+// 	ompd_address_space_context_t *context = task_handle->ah->context ;
+
+// 	if( !context )
+// 		return ompd_rc_bad_input ;
+// 	if(!ompd_state )
+// 		return ompd_rc_needs_state_tracking ;
+// 	if(!callbacks)
+// 		return ompd_rc_callback_error ;
+
+
+// 	// task.icv.target_data->tgt_start => will return the entry point of 
+// 	// task
+
+
+// 	// get the task type
+// 	ompd_addr_t task_address ;
+// 	ompd_word_t task_kind ;
+// 	ompd_rc_t ret ;
+// 	GET_VALUE(context, NULL, "kind", task_kind, task_address,
+// 		target_sizes.sizeof_long_long, 1, ret);
+
+// 	if (ret != ompd_rc_ok)
+// 		return ret ;
+
+// 	// explict task
+// 	  if(task_kind == 1)
+// 	{
+// 		GET_VALUE(context, NULL, "fn", entry_point->address , 
+// 			task_address, target_sizes.sizeof_long_long, 1, ret);
+
+// 		if (ret != ompd_rc_ok)
+// 			return ret ;
+// 	}
+// 	// implict task
+// 	  else
+// 	{
+
+// 	}
+
+// 	return ompd_rc_ok ;
+// }
