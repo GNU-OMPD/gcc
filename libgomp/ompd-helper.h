@@ -1,5 +1,4 @@
-
-/* Copyright (C) The GNU Toolchain Authors.
+/* Copyright (C) 2022 Free Software Foundation, Inc.
    Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
    This file is part of the GNU Offloading and Multi Processing Library
    (libgomp).
@@ -19,14 +18,11 @@
    see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
    <http://www.gnu.org/licenses/>.  */
 
-
 /* This file contains data types and declarations of functions that are not
    provided by the book but we find them necessary.  */
 
-
 #ifndef _OMPD_HELPER_H
 #define _OMPD_HELPER_H
-
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,7 +30,6 @@ extern "C" {
 
 #include "omp-tools.h"
 #include "ompd-types.h"
-
 #include "config.h"
 #include <assert.h>
 #include <stdio.h>
@@ -49,7 +44,6 @@ extern "C" {
 
 extern const ompd_callbacks_t *callbacks;
 extern __UINT64_TYPE__ gompd_state;
-
 extern ompd_device_type_sizes_t target_sizes;
 
 typedef struct _ompd_aspace_handle
@@ -137,7 +131,6 @@ typedef struct opmd_field_of_struct
 	    ompd_scope_address_space) \
   ompd_icv (stacksize_var, "stack size var", ompd_scope_address_space) \
   ompd_icv (debug_var, "debug var", ompd_scope_address_space) \
-  ompd_icv (ompd_state, "OMP_DEBUG", ompd_scope_address_space) \
   ompd_icv (display_affinity_var, "display affinity var", \
 	    ompd_scope_address_space) \
   ompd_icv (affinity_format_var, "affinity format var", \
@@ -172,7 +165,7 @@ enum ompd_icv
 #pragma GCC visibility push(hidden)
 #endif
 
-ompd_rc_t gompd_get_sizes (ompd_address_space_context_t *);
+ompd_rc_t get_sizes (ompd_address_space_context_t *);
 
 /* Get Local internal control variables.  */
 ompd_rc_t gompd_get_nthread (ompd_thread_handle_t *, ompd_word_t *);
@@ -210,31 +203,15 @@ ompd_rc_t gompd_get_throttled_spin_count (ompd_address_space_handle_t *,
 					  ompd_word_t *);
 ompd_rc_t gompd_get_managed_threads (ompd_address_space_handle_t *,
 				     ompd_word_t *);
-ompd_rc_t gompd_stringize_gompd_enabled (ompd_address_space_handle_t *,
-                                         const char **);
 /*End of Global ICVs.  */
-
-/* helper function */ 
-void gompd_init_target_struct (ompd_address_space_context_t *,
-                    ompd_thread_context_t *,  ompd_address_t *,
-                    struct opmd_field_of_struct_t  * );
-ompd_rc_t gompd_get_field_offest (struct opmd_field_of_struct_t *  );
-ompd_rc_t gompd_get_field_size (struct opmd_field_of_struct_t *  ) ;
-void gompd_adresses (struct opmd_field_of_struct_t *,
-                    const char *, const char *);
-char* gompd_string_contact (const char* , const char* , const char* ,
-                    const char* );
 
 
 #ifdef HAVE_ATTRIBUTE_VISIBILITY
 #pragma GCC visibility pop
 #endif
 
-
 #ifdef __cplusplus
 } // extern C
 #endif
 
-
 #endif /* _OMPD_HELPER_H */
-

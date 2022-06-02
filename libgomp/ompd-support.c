@@ -39,7 +39,7 @@ const char **ompd_dll_locations = NULL;
 __UINT64_TYPE__ gompd_state;
 
 void
-gompd_load (void)
+gompd_load ()
 {
   /* Get the offset of the struct members.  */
   #define gompd_init_access(t, m)  \
@@ -76,48 +76,47 @@ gompd_load (void)
 /* Dummy functions. they shoud not be optimized.  */
 
 void __attribute__ ((noipa))
-ompd_dll_locations_valid (void)
+ompd_dll_locations_valid ()
 {
 }
 
 void __attribute__ ((noipa))
-ompd_bp_parallel_begin (void)
+ompd_bp_parallel_begin ()
 {
 }
 
 void __attribute__ ((noipa))
-ompd_bp_parallel_end (void)
+ompd_bp_parallel_end ()
 {
 }
 
 void __attribute__ ((noipa))
-ompd_bp_task_begin (void)
+ompd_bp_task_begin ()
 {
 }
 
 void __attribute__ ((noipa))
-ompd_bp_task_end (void)
+ompd_bp_task_end ()
 {
 }
 
 void __attribute__ ((noipa))
-ompd_bp_thread_begin (void)
+ompd_bp_thread_begin ()
 {
 }
 
 void __attribute__ ((noipa))
-ompd_bp_thread_end (void)
+ompd_bp_thread_end ()
 {
 }
 
 void __attribute__ ((noipa))
-ompd_bp_device_begin (void)
+ompd_bp_device_begin ()
 {
 }
 
 void __attribute__ ((noipa))
-ompd_bp_device_end (void)
+ompd_bp_device_end ()
 {
 }
 #endif /* __ELF__*/
-

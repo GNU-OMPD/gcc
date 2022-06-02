@@ -19,15 +19,9 @@
    see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
    <http://www.gnu.org/licenses/>.  */
 
-
 /* This file contains the source code of functions
    declared in ompd-helper.h.  */
-
-
 #include "ompd-helper.h"
-
-ompd_device_type_sizes_t target_sizes;
-
 
 /* Get global ICVs.  */
 ompd_rc_t
@@ -218,7 +212,6 @@ gompd_get_throttled_spin_count (ompd_address_space_handle_t *ah,
 	     target_sizes.sizeof_long_long, 1, ret, symbol_addr);
   *throt = temp;
   return ret;
-}
 
 ompd_rc_t
 gompd_get_managed_threads (ompd_address_space_handle_t *ah, ompd_word_t *man_th)
@@ -235,19 +228,6 @@ gompd_get_managed_threads (ompd_address_space_handle_t *ah, ompd_word_t *man_th)
 
 ompd_rc_t
 gompd_get_gompd_enabled (ompd_address_space_handle_t *ah, const char **string)
-{
-  CHECK (ah);
-  ompd_word_t temp = 0;
-  ompd_rc_t ret;
-  ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
-  GET_VALUE (ah->context, NULL, "gompd_enabled", temp, temp,
-             target_sizes.sizeof_int, 1, ret, symbol_addr);
-  static const char *temp_string = "disabled";
-  if (temp == 1)
-    temp_string = "enabled";
-  else if (temp == -1)
-    temp_string = "undefined";
-  *string = temp_string;
   return ret;
 }
 

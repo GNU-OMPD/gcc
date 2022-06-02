@@ -107,7 +107,6 @@ ompd_get_icv_from_scope (void *handle, ompd_scope_t scope, ompd_icv_id_t icv_id,
 	    return gompd_get_cancellation (ashandle, icv_value);
 	  case gompd_icv_max_task_priority_var:
 	    return gompd_get_max_task_priority (ashandle, icv_value);
-	  case gompd_icv_stacksize_var:
 	    return gompd_get_stacksize (ashandle, icv_value);
 	  case gompd_icv_debug_var:
 	    return gompd_get_debug (ashandle, icv_value);
@@ -134,10 +133,10 @@ ompd_get_icv_from_scope (void *handle, ompd_scope_t scope, ompd_icv_id_t icv_id,
 	  default:
 	    return ompd_rc_unsupported;
 	}
-    }
-    return ompd_rc_error;
-}
-
+=======
+	    return
+	      gompd_get_cancellation ((ompd_address_space_handle_t *) handle,
+				      icv_value);
 ompd_rc_t
 ompd_get_icv_string_from_scope (void *handle, ompd_scope_t scope,
 				ompd_icv_id_t icv_id, const char **icv_value)
