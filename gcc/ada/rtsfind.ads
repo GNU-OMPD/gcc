@@ -115,7 +115,13 @@ package Rtsfind is
 
       --  Children of Ada.Numerics
 
+      Ada_Numerics_Big_Numbers,
       Ada_Numerics_Generic_Elementary_Functions,
+
+      --  Children of Ada.Numerics.Big_Numbers
+
+      Ada_Numerics_Big_Numbers_Big_Integers,
+      Ada_Numerics_Big_Numbers_Big_Integers_Ghost,
 
       --  Children of Ada.Real_Time
 
@@ -422,6 +428,7 @@ package Rtsfind is
       System_Put_Images,
       System_Put_Task_Images,
       System_Relative_Delays,
+      System_Return_Stack,
       System_RPC,
       System_Scalar_Values,
       System_Secondary_Stack,
@@ -584,6 +591,9 @@ package Rtsfind is
      RE_Exchange_Handler,                -- Ada.Interrupts
      RE_Detach_Handler,                  -- Ada.Interrupts
      RE_Reference,                       -- Ada.Interrupts
+
+     RE_Big_Integer,             -- Ada.Numerics.Big_Numbers.Big_Integers
+     RO_GH_Big_Integer,          -- Ada.Numerics.Big_Numbers.Big_Integers_Ghost
 
      RE_Names,                           -- Ada.Interrupts.Names
 
@@ -1834,6 +1844,9 @@ package Rtsfind is
 
      RO_RD_Delay_For,                    -- System.Relative_Delays
 
+     RE_RS_Allocate,                     -- System.Return_Stack
+     RE_RS_Pool,                         -- System.Return_Stack
+
      RE_IS_Is1,                          -- System.Scalar_Values
      RE_IS_Is2,                          -- System.Scalar_Values
      RE_IS_Is4,                          -- System.Scalar_Values
@@ -2270,6 +2283,9 @@ package Rtsfind is
      RE_Exchange_Handler                 => Ada_Interrupts,
      RE_Detach_Handler                   => Ada_Interrupts,
      RE_Reference                        => Ada_Interrupts,
+
+     RE_Big_Integer             => Ada_Numerics_Big_Numbers_Big_Integers,
+     RO_GH_Big_Integer          => Ada_Numerics_Big_Numbers_Big_Integers_Ghost,
 
      RE_Names                            => Ada_Interrupts_Names,
 
@@ -3523,6 +3539,9 @@ package Rtsfind is
 
      RO_RD_Delay_For                     => System_Relative_Delays,
 
+     RE_RS_Allocate                      => System_Return_Stack,
+     RE_RS_Pool                          => System_Return_Stack,
+
      RE_Do_Apc                           => System_RPC,
      RE_Do_Rpc                           => System_RPC,
      RE_Params_Stream_Type               => System_RPC,
@@ -4009,6 +4028,7 @@ package Rtsfind is
       System_Fat_LLF          => True,
       System_Fat_SFlt         => True,
       System_Machine_Code     => True,
+      System_Return_Stack     => True,
       System_Secondary_Stack  => True,
       System_Storage_Elements => True,
       System_Task_Info        => True,

@@ -896,12 +896,19 @@ package body Errout is
    -- Error_Msg_GNAT_Extension --
    ------------------------------
 
-   procedure Error_Msg_GNAT_Extension (Extension : String) is
-      Loc : constant Source_Ptr := Token_Ptr;
+   procedure Error_Msg_GNAT_Extension (Extension : String; Loc : Source_Ptr) is
    begin
       if not Extensions_Allowed then
-         Error_Msg (Extension & " is a 'G'N'A'T specific extension", Loc);
-         Error_Msg ("\unit must be compiled with -gnatX switch", Loc);
+         Error_Msg (Extension & " is a 'G'N'A'T-specific extension", Loc);
+
+         if No (Ada_Version_Pragma) then
+            Error_Msg ("\unit must be compiled with -gnatX "
+                       & "or use pragma Extensions_Allowed (On)", Loc);
+         else
+            Error_Msg_Sloc := Sloc (Ada_Version_Pragma);
+            Error_Msg ("\incompatible with Ada version set#", Loc);
+            Error_Msg ("\must use pragma Extensions_Allowed (On)", Loc);
+         end if;
       end if;
    end Error_Msg_GNAT_Extension;
 
@@ -3578,10 +3585,14 @@ package body Errout is
          end if;
       end if;
 
-      --  The following assignment ensures that a second ampersand insertion
-      --  character will correspond to the Error_Msg_Node_2 parameter.
+      --  The following assignment ensures that further ampersand insertion
+      --  characters will correspond to the Error_Msg_Node_# parameter.
 
       Error_Msg_Node_1 := Error_Msg_Node_2;
+      Error_Msg_Node_2 := Error_Msg_Node_3;
+      Error_Msg_Node_3 := Error_Msg_Node_4;
+      Error_Msg_Node_4 := Error_Msg_Node_5;
+      Error_Msg_Node_5 := Error_Msg_Node_6;
    end Set_Msg_Insertion_Node;
 
    --------------------------------------
@@ -3756,7 +3767,7 @@ package body Errout is
          Set_Msg_Str ("<error>");
 
       else
-         Get_Unit_Name_String (Error_Msg_Unit_1, Suffix);
+         Get_Unit_Name_String (Global_Name_Buffer, Error_Msg_Unit_1, Suffix);
          Set_Msg_Blank;
          Set_Msg_Quote;
          Set_Msg_Name_Buffer;
@@ -3872,7 +3883,7 @@ package body Errout is
       --  dealing with some cases of internal names).
 
       while Name_Len > 1 and then Name_Buffer (Name_Len) in 'A' .. 'Z' loop
-         Name_Len := Name_Len  - 1;
+         Name_Len := Name_Len - 1;
       end loop;
 
       --  If we have any of the names from standard that start with the

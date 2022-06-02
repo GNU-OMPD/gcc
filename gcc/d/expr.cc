@@ -22,6 +22,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "dmd/aggregate.h"
 #include "dmd/ctfe.h"
 #include "dmd/declaration.h"
+#include "dmd/enum.h"
 #include "dmd/expression.h"
 #include "dmd/identifier.h"
 #include "dmd/init.h"
@@ -846,53 +847,10 @@ public:
       }
     else
       {
+	/* Appending an element or array to another array has already been
+	   handled by the front-end.  */
 	gcc_assert (tb1->ty == TY::Tarray || tb2->ty == TY::Tsarray);
-
-	if ((tb2->ty == TY::Tarray || tb2->ty == TY::Tsarray)
-	    && same_type_p (etype, tb2->nextOf ()->toBasetype ()))
-	  {
-	    /* Append an array to another array:
-	       The assignment is handled by the D run-time library, so only
-	       need to call `_d_arrayappendT(ti, &e1, e2)'  */
-	    result = build_libcall (LIBCALL_ARRAYAPPENDT, e->type, 3,
-				    build_typeinfo (e->loc, e->type),
-				    ptr, d_array_convert (e->e2));
-	  }
-	else if (same_type_p (etype, tb2))
-	  {
-	    /* Append an element to an array:
-	       The assignment is generated inline, so need to handle temporaries
-	       here, and ensure that they are evaluated in the correct order.
-
-	       The generated code should end up being equivalent to:
-		    _d_arrayappendcTX(ti, &e1, 1)[e1.length - 1] = e2
-	     */
-	    tree callexp = build_libcall (LIBCALL_ARRAYAPPENDCTX, e->type, 3,
-					  build_typeinfo (e->loc, e->type),
-					  ptr, size_one_node);
-	    callexp = d_save_expr (callexp);
-
-	    /* Assign e2 to last element.  */
-	    tree offexp = d_array_length (callexp);
-	    offexp = build2 (MINUS_EXPR, TREE_TYPE (offexp),
-			     offexp, size_one_node);
-
-	    tree ptrexp = d_array_ptr (callexp);
-	    ptrexp = void_okay_p (ptrexp);
-	    ptrexp = build_array_index (ptrexp, offexp);
-
-	    /* Evaluate expression before appending.  */
-	    tree rhs = build_expr (e->e2);
-	    tree rexpr = stabilize_expr (&rhs);
-
-	    if (TREE_CODE (rhs) == CALL_EXPR)
-	      rhs = force_target_expr (rhs);
-
-	    result = modify_expr (build_deref (ptrexp), rhs);
-	    result = compound_expr (rexpr, result);
-	  }
-	else
-	  gcc_unreachable ();
+	gcc_unreachable ();
       }
 
     /* Construct in order: ptr = &e1, _d_arrayappend(ptr, e2), *ptr;  */
@@ -1186,6 +1144,14 @@ public:
     this->result_ = build_assign (modifycode, t1, t2);
   }
 
+  /* Build a throw expression.  */
+
+  void visit (ThrowExp *e)
+  {
+    tree arg = build_expr_dtor (e->e1);
+    this->result_ = build_libcall (LIBCALL_THROW, Type::tvoid, 1, arg);
+  }
+
   /* Build a postfix expression.  */
 
   void visit (PostExp *e)
@@ -1429,62 +1395,16 @@ public:
       {
 	/* For class object references, if there is a destructor for that class,
 	   the destructor is called for the object instance.  */
-	libcall_fn libcall;
+	gcc_assert (e->e1->op == EXP::variable);
 
-	if (e->e1->op == EXP::variable)
-	  {
-	    VarDeclaration *v = e->e1->isVarExp ()->var->isVarDeclaration ();
-	    if (v && v->onstack)
-	      {
-		libcall = tb1->isClassHandle ()->isInterfaceDeclaration ()
-		  ? LIBCALL_CALLINTERFACEFINALIZER : LIBCALL_CALLFINALIZER;
+	VarDeclaration *v = e->e1->isVarExp ()->var->isVarDeclaration ();
+	gcc_assert (v && v->onstack ());
 
-		this->result_ = build_libcall (libcall, Type::tvoid, 1, t1);
-		return;
-	      }
-	  }
+	libcall_fn libcall = tb1->isClassHandle ()->isInterfaceDeclaration ()
+	  ? LIBCALL_CALLINTERFACEFINALIZER : LIBCALL_CALLFINALIZER;
 
-	/* Otherwise, the garbage collector is called to immediately free the
-	   memory allocated for the class instance.  */
-	libcall = tb1->isClassHandle ()->isInterfaceDeclaration ()
-	  ? LIBCALL_DELINTERFACE : LIBCALL_DELCLASS;
-
-	t1 = build_address (t1);
 	this->result_ = build_libcall (libcall, Type::tvoid, 1, t1);
-      }
-    else if (tb1->ty == TY::Tarray)
-      {
-	/* For dynamic arrays, the garbage collector is called to immediately
-	   release the memory.  */
-	Type *telem = tb1->nextOf ()->baseElemOf ();
-	tree ti = null_pointer_node;
-
-	if (TypeStruct *ts = telem->isTypeStruct ())
-	  {
-	    /* Might need to run destructor on array contents.  */
-	    if (ts->sym->dtor)
-	      ti = build_typeinfo (e->loc, tb1->nextOf ());
-	  }
-
-	/* Generate: _delarray_t (&t1, ti);  */
-	this->result_ = build_libcall (LIBCALL_DELARRAYT, Type::tvoid, 2,
-				       build_address (t1), ti);
-      }
-    else if (tb1->ty == TY::Tpointer)
-      {
-	/* For pointers to a struct instance, if the struct has overloaded
-	   operator delete, then that operator is called.  */
-	t1 = build_address (t1);
-	Type *tnext = tb1->isTypePointer ()->next->toBasetype ();
-
-	/* This case should have been rewritten to `_d_delstruct` in the
-	   semantic phase.  */
-	if (TypeStruct *ts = tnext->isTypeStruct ())
-	  gcc_assert (!ts->sym->dtor);
-
-	/* Otherwise, the garbage collector is called to immediately free the
-	   memory allocated for the pointer.  */
-	this->result_ = build_libcall (LIBCALL_DELMEMORY, Type::tvoid, 1, t1);
+	return;
       }
     else
       {
@@ -1928,9 +1848,16 @@ public:
 	else
 	  {
 	    tree object = build_expr (e->e1);
+	    Type *tb = e->e1->type->toBasetype ();
 
-	    if (e->e1->type->toBasetype ()->ty != TY::Tstruct)
+	    if (tb->ty != TY::Tstruct)
 	      object = build_deref (object);
+
+	    /* __complex is represented as a struct in the front-end, but
+	       underlying is really a complex type.  */
+	    if (e->e1->type->ty == TY::Tenum
+		&& e->e1->type->isTypeEnum ()->sym->isSpecial ())
+	      object = build_vconvert (build_ctype (tb), object);
 
 	    this->result_ = component_ref (object, get_symbol_decl (vd));
 	  }
@@ -2596,7 +2523,7 @@ public:
 
 	for (size_t i = 0; i < e->len; i++)
 	  {
-	    tree value = build_integer_cst (e->charAt (i), etype);
+	    tree value = build_integer_cst (e->getCodeUnit (i), etype);
 	    CONSTRUCTOR_APPEND_ELT (elms, size_int (i), value);
 	  }
 
@@ -3034,6 +2961,16 @@ public:
       }
 
     this->result_ = var;
+  }
+
+  /* Build an uninitialized value, generated from void initializers.  */
+
+  void visit (VoidInitExp *e)
+  {
+    /* The front-end only generates these for the initializer of globals.
+       Represent `void' as zeroes, regardless of the type's default value.  */
+    gcc_assert (this->constp_);
+    this->result_ = build_zero_cst (build_ctype (e->type));
   }
 
   /* These expressions are mainly just a placeholders in the frontend.

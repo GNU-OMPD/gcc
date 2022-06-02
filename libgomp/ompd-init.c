@@ -1,4 +1,4 @@
-/* Copyright (C) 2022 Free Software Foundation, Inc.
+/* Copyright (C) The GNU Toolchain Authors.
    Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
    This file is part of the GNU Offloading and Multi Processing Library
    (libgomp).
@@ -68,7 +68,7 @@ ompd_get_version_string (const char **string)
 }
 
 ompd_rc_t
-ompd_finalize ()
+ompd_finalize (void)
 {
   return ompd_rc_ok;
 }
@@ -82,7 +82,7 @@ ompd_process_initialize (ompd_address_space_context_t *context,
   if (context == NULL || handle == NULL)
     return ompd_rc_bad_input;
 
-  ompd_rc_t ret = get_sizes (context);
+  ompd_rc_t ret = gompd_get_sizes (context);
   if (ret != ompd_rc_ok)
     return ret;
 

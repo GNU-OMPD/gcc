@@ -1937,6 +1937,9 @@ test system can execute decimal floating point tests.
 
 @item hard_dfp
 Target generates decimal floating point instructions with current options.
+
+@item dfp_bid
+Target uses the BID format for decimal floating point.
 @end table
 
 @subsubsection ARM-specific attributes
@@ -2236,6 +2239,10 @@ ARM target supports the @code{-mfloat-abi=softfp} option.
 @anchor{arm_hard_ok}
 ARM target supports the @code{-mfloat-abi=hard} option.
 
+@item arm_mve
+@anchor{arm_mve}
+ARM target supports generating MVE instructions.
+
 @item arm_v8_1_lob_ok
 @anchor{arm_v8_1_lob_ok}
 ARM Target supports executing the Armv8.1-M Mainline Low Overhead Loop
@@ -2414,6 +2421,18 @@ setting is Power8 or later.
 @item has_arch_pwr9
 PowerPC target pre-defines macro _ARCH_PWR9 which means the @code{-mcpu}
 setting is Power9 or later.
+@end table
+
+@subsection RISC-V specific attributes
+
+@table @code
+
+@item rv32
+Test system has an integer register width of 32 bits.
+
+@item rv64
+Test system has an integer register width of 64 bits.
+
 @end table
 
 @subsubsection Other hardware attributes

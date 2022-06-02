@@ -39,6 +39,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "cfganal.h"
 #include "tree-inline.h"
 #include "internal-fn.h"
+#include "gimple-iterator.h"
 #include "gimple-fold.h"
 #include "tree-eh.h"
 #include "gimplify.h"
@@ -56,7 +57,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree-ssa-propagate.h"
 #include "tree-cfg.h"
 #include "domwalk.h"
-#include "gimple-iterator.h"
 #include "gimple-match.h"
 #include "stringpool.h"
 #include "attribs.h"
@@ -426,11 +426,8 @@ typedef hash_table<vn_ssa_aux_hasher>::iterator vn_ssa_aux_iterator_type;
 static struct obstack vn_ssa_aux_obstack;
 
 static vn_nary_op_t vn_nary_op_insert_stmt (gimple *, tree);
-static unsigned int vn_nary_length_from_stmt (gimple *);
-static vn_nary_op_t alloc_vn_nary_op_noinit (unsigned int, obstack *);
 static vn_nary_op_t vn_nary_op_insert_into (vn_nary_op_t,
 					    vn_nary_op_table_type *);
-static void init_vn_nary_op_from_stmt (vn_nary_op_t, gassign *);
 static void init_vn_nary_op_from_pieces (vn_nary_op_t, unsigned int,
 					 enum tree_code, tree, tree *);
 static tree vn_lookup_simplify_result (gimple_match_op *);
@@ -1802,11 +1799,13 @@ struct pd_data
 struct vn_walk_cb_data
 {
   vn_walk_cb_data (vn_reference_t vr_, tree orig_ref_, tree *last_vuse_ptr_,
-		   vn_lookup_kind vn_walk_kind_, bool tbaa_p_, tree mask_)
+		   vn_lookup_kind vn_walk_kind_, bool tbaa_p_, tree mask_,
+		   bool redundant_store_removal_p_)
     : vr (vr_), last_vuse_ptr (last_vuse_ptr_), last_vuse (NULL_TREE),
       mask (mask_), masked_result (NULL_TREE), vn_walk_kind (vn_walk_kind_),
-      tbaa_p (tbaa_p_), saved_operands (vNULL), first_set (-2),
-      first_base_set (-2), known_ranges (NULL)
+      tbaa_p (tbaa_p_), redundant_store_removal_p (redundant_store_removal_p_),
+      saved_operands (vNULL), first_set (-2), first_base_set (-2),
+      known_ranges (NULL)
   {
     if (!last_vuse_ptr)
       last_vuse_ptr = &last_vuse;
@@ -1865,6 +1864,7 @@ struct vn_walk_cb_data
   tree masked_result;
   vn_lookup_kind vn_walk_kind;
   bool tbaa_p;
+  bool redundant_store_removal_p;
   vec<vn_reference_op_s> saved_operands;
 
   /* The VDEFs of partial defs we come along.  */
@@ -2620,6 +2620,19 @@ vn_reference_lookup_3 (ao_ref *ref, tree vuse, void *data_,
 	  && !refs_may_alias_p_1 (ref, &lhs_ref, data->tbaa_p))
 	{
 	  *disambiguate_only = TR_VALUEIZE_AND_DISAMBIGUATE;
+	  return NULL;
+	}
+
+      /* When the def is a CLOBBER we can optimistically disambiguate
+	 against it since any overlap it would be undefined behavior.
+	 Avoid this for obvious must aliases to save compile-time though.
+	 We also may not do this when the query is used for redundant
+	 store removal.  */
+      if (!data->redundant_store_removal_p
+	  && gimple_clobber_p (def_stmt)
+	  && !operand_equal_p (ao_ref_base (&lhs_ref), base, OEP_ADDRESS_OF))
+	{
+	  *disambiguate_only = TR_DISAMBIGUATE;
 	  return NULL;
 	}
 
@@ -3607,7 +3620,8 @@ vn_reference_lookup_pieces (tree vuse, alias_set_type set,
     {
       ao_ref r;
       unsigned limit = param_sccvn_max_alias_queries_per_access;
-      vn_walk_cb_data data (&vr1, NULL_TREE, NULL, kind, true, NULL_TREE);
+      vn_walk_cb_data data (&vr1, NULL_TREE, NULL, kind, true, NULL_TREE,
+			    false);
       vec<vn_reference_op_s> ops_for_ref;
       if (!valueized_p)
 	ops_for_ref = vr1.operands;
@@ -3652,12 +3666,14 @@ vn_reference_lookup_pieces (tree vuse, alias_set_type set,
    MASK is either NULL_TREE, or can be an INTEGER_CST if the result of the
    load is bitwise anded with MASK and so we are only interested in a subset
    of the bits and can ignore if the other bits are uninitialized or
-   not initialized with constants.  */
+   not initialized with constants.  When doing redundant store removal
+   the caller has to set REDUNDANT_STORE_REMOVAL_P.  */
 
 tree
 vn_reference_lookup (tree op, tree vuse, vn_lookup_kind kind,
 		     vn_reference_t *vnresult, bool tbaa_p,
-		     tree *last_vuse_ptr, tree mask)
+		     tree *last_vuse_ptr, tree mask,
+		     bool redundant_store_removal_p)
 {
   vec<vn_reference_op_s> operands;
   struct vn_reference_s vr1;
@@ -3669,6 +3685,43 @@ vn_reference_lookup (tree op, tree vuse, vn_lookup_kind kind,
   vr1.vuse = vuse_ssa_val (vuse);
   vr1.operands = operands
     = valueize_shared_reference_ops_from_ref (op, &valueized_anything);
+
+  /* Handle &MEM[ptr + 5].b[1].c as POINTER_PLUS_EXPR.  Avoid doing
+     this before the pass folding __builtin_object_size had a chance to run.  */
+  if ((cfun->curr_properties & PROP_objsz)
+      && operands[0].opcode == ADDR_EXPR
+      && operands.last ().opcode == SSA_NAME)
+    {
+      poly_int64 off = 0;
+      vn_reference_op_t vro;
+      unsigned i;
+      for (i = 1; operands.iterate (i, &vro); ++i)
+	{
+	  if (vro->opcode == SSA_NAME)
+	    break;
+	  else if (known_eq (vro->off, -1))
+	    break;
+	  off += vro->off;
+	}
+      if (i == operands.length () - 1
+	  /* Make sure we the offset we accumulated in a 64bit int
+	     fits the address computation carried out in target
+	     offset precision.  */
+	  && (off.coeffs[0]
+	      == sext_hwi (off.coeffs[0], TYPE_PRECISION (sizetype))))
+	{
+	  gcc_assert (operands[i-1].opcode == MEM_REF);
+	  tree ops[2];
+	  ops[0] = operands[i].op0;
+	  ops[1] = wide_int_to_tree (sizetype, off);
+	  tree res = vn_nary_op_lookup_pieces (2, POINTER_PLUS_EXPR,
+					       TREE_TYPE (op), ops, NULL);
+	  if (res)
+	    return res;
+	  return NULL_TREE;
+	}
+    }
+
   vr1.type = TREE_TYPE (op);
   ao_ref op_ref;
   ao_ref_init (&op_ref, op);
@@ -3698,7 +3751,8 @@ vn_reference_lookup (tree op, tree vuse, vn_lookup_kind kind,
 					     vr1.type, ops_for_ref))
 	ao_ref_init (&r, op);
       vn_walk_cb_data data (&vr1, r.ref ? NULL_TREE : op,
-			    last_vuse_ptr, kind, tbaa_p, mask);
+			    last_vuse_ptr, kind, tbaa_p, mask,
+			    redundant_store_removal_p);
 
       wvnresult
 	= ((vn_reference_t)
@@ -3760,13 +3814,50 @@ vn_reference_insert (tree op, tree result, tree vuse, tree vdef)
   vn_reference_t vr1;
   bool tem;
 
+  vec<vn_reference_op_s> operands
+    = valueize_shared_reference_ops_from_ref (op, &tem);
+  /* Handle &MEM[ptr + 5].b[1].c as POINTER_PLUS_EXPR.  Avoid doing this
+     before the pass folding __builtin_object_size had a chance to run.  */
+  if ((cfun->curr_properties & PROP_objsz)
+      && operands[0].opcode == ADDR_EXPR
+      && operands.last ().opcode == SSA_NAME)
+    {
+      poly_int64 off = 0;
+      vn_reference_op_t vro;
+      unsigned i;
+      for (i = 1; operands.iterate (i, &vro); ++i)
+	{
+	  if (vro->opcode == SSA_NAME)
+	    break;
+	  else if (known_eq (vro->off, -1))
+	    break;
+	  off += vro->off;
+	}
+      if (i == operands.length () - 1
+	  /* Make sure we the offset we accumulated in a 64bit int
+	     fits the address computation carried out in target
+	     offset precision.  */
+	  && (off.coeffs[0]
+	      == sext_hwi (off.coeffs[0], TYPE_PRECISION (sizetype))))
+	{
+	  gcc_assert (operands[i-1].opcode == MEM_REF);
+	  tree ops[2];
+	  ops[0] = operands[i].op0;
+	  ops[1] = wide_int_to_tree (sizetype, off);
+	  vn_nary_op_insert_pieces (2, POINTER_PLUS_EXPR,
+				    TREE_TYPE (op), ops, result,
+				    VN_INFO (result)->value_id);
+	  return;
+	}
+    }
+
   vr1 = XOBNEW (&vn_tables_obstack, vn_reference_s);
   if (TREE_CODE (result) == SSA_NAME)
     vr1->value_id = VN_INFO (result)->value_id;
   else
     vr1->value_id = get_or_alloc_constant_value_id (result);
   vr1->vuse = vuse_ssa_val (vuse);
-  vr1->operands = valueize_shared_reference_ops_from_ref (op, &tem).copy ();
+  vr1->operands = operands.copy ();
   vr1->type = TREE_TYPE (op);
   vr1->punned = false;
   ao_ref op_ref;
@@ -3854,7 +3945,7 @@ vn_reference_insert_pieces (tree vuse, alias_set_type set,
 
 /* Compute and return the hash value for nary operation VBO1.  */
 
-static hashval_t
+hashval_t
 vn_nary_op_compute_hash (const vn_nary_op_t vno1)
 {
   inchash::hash hstate;
@@ -3927,7 +4018,7 @@ init_vn_nary_op_from_pieces (vn_nary_op_t vno, unsigned int length,
 
 /* Return the number of operands for a vn_nary ops structure from STMT.  */
 
-static unsigned int
+unsigned int
 vn_nary_length_from_stmt (gimple *stmt)
 {
   switch (gimple_assign_rhs_code (stmt))
@@ -3950,7 +4041,7 @@ vn_nary_length_from_stmt (gimple *stmt)
 
 /* Initialize VNO from STMT.  */
 
-static void
+void
 init_vn_nary_op_from_stmt (vn_nary_op_t vno, gassign *stmt)
 {
   unsigned i;
@@ -4047,7 +4138,7 @@ vn_nary_op_lookup_stmt (gimple *stmt, vn_nary_op_t *vnresult)
 
 /* Allocate a vn_nary_op_t with LENGTH operands on STACK.  */
 
-static vn_nary_op_t
+vn_nary_op_t
 alloc_vn_nary_op_noinit (unsigned int length, struct obstack *stack)
 {
   return (vn_nary_op_t) obstack_alloc (stack, sizeof_vn_nary_op (length));
@@ -5218,12 +5309,20 @@ visit_reference_op_call (tree lhs, gcall *stmt)
 
   if (vnresult)
     {
-      if (vnresult->result_vdef && vdef)
-	changed |= set_ssa_val_to (vdef, vnresult->result_vdef);
-      else if (vdef)
-	/* If the call was discovered to be pure or const reflect
-	   that as far as possible.  */
-	changed |= set_ssa_val_to (vdef, vuse_ssa_val (gimple_vuse (stmt)));
+      if (vdef)
+	{
+	  if (vnresult->result_vdef)
+	    changed |= set_ssa_val_to (vdef, vnresult->result_vdef);
+	  else if (!lhs && gimple_call_lhs (stmt))
+	    /* If stmt has non-SSA_NAME lhs, value number the vdef to itself,
+	       as the call still acts as a lhs store.  */
+	    changed |= set_ssa_val_to (vdef, vdef);
+	  else
+	    /* If the call was discovered to be pure or const reflect
+	       that as far as possible.  */
+	    changed |= set_ssa_val_to (vdef,
+				       vuse_ssa_val (gimple_vuse (stmt)));
+	}
 
       if (!vnresult->result && lhs)
 	vnresult->result = lhs;
@@ -5248,7 +5347,11 @@ visit_reference_op_call (tree lhs, gcall *stmt)
 	      if (TREE_CODE (fn) == ADDR_EXPR
 		  && TREE_CODE (TREE_OPERAND (fn, 0)) == FUNCTION_DECL
 		  && (flags_from_decl_or_type (TREE_OPERAND (fn, 0))
-		      & (ECF_CONST | ECF_PURE)))
+		      & (ECF_CONST | ECF_PURE))
+		  /* If stmt has non-SSA_NAME lhs, value number the
+		     vdef to itself, as the call still acts as a lhs
+		     store.  */
+		  && (lhs || gimple_call_lhs (stmt) == NULL_TREE))
 		vdef_val = vuse_ssa_val (gimple_vuse (stmt));
 	    }
 	  changed |= set_ssa_val_to (vdef, vdef_val);
@@ -6295,9 +6398,7 @@ eliminate_dom_walker::eliminate_stmt (basic_block b, gimple_stmt_iterator *gsi)
 		   && SSA_NAME_RANGE_INFO (lhs)
 		   && ! SSA_NAME_RANGE_INFO (sprime)
 		   && b == sprime_b)
-	    duplicate_ssa_name_range_info (sprime,
-					   SSA_NAME_RANGE_TYPE (lhs),
-					   SSA_NAME_RANGE_INFO (lhs));
+	    duplicate_ssa_name_range_info (sprime, lhs);
 	}
 
       /* Inhibit the use of an inserted PHI on a loop header when
@@ -6511,7 +6612,8 @@ eliminate_dom_walker::eliminate_stmt (basic_block b, gimple_stmt_iterator *gsi)
       tree val = NULL_TREE;
       if (lookup_lhs)
 	val = vn_reference_lookup (lookup_lhs, gimple_vuse (stmt),
-				   VN_WALKREWRITE, &vnresult, false);
+				   VN_WALKREWRITE, &vnresult, false,
+				   NULL, NULL_TREE, true);
       if (TREE_CODE (rhs) == SSA_NAME)
 	rhs = VN_INFO (rhs)->valnum;
       if (val
@@ -7034,15 +7136,14 @@ eliminate_with_rpo_vn (bitmap inserted_exprs)
   return walker.eliminate_cleanup ();
 }
 
-static unsigned
+unsigned
 do_rpo_vn (function *fn, edge entry, bitmap exit_bbs,
-	   bool iterate, bool eliminate);
+	   bool iterate, bool eliminate, vn_lookup_kind kind);
 
 void
 run_rpo_vn (vn_lookup_kind kind)
 {
-  default_vn_walk_kind = kind;
-  do_rpo_vn (cfun, NULL, NULL, true, false);
+  do_rpo_vn (cfun, NULL, NULL, true, false, kind);
 
   /* ???  Prune requirement of these.  */
   constant_to_value_id = new hash_table<vn_constant_hasher> (23);
@@ -7740,11 +7841,12 @@ do_unwind (unwind_state *to, rpo_elim &avail)
    executed and iterate.  If ELIMINATE is true then perform
    elimination, otherwise leave that to the caller.  */
 
-static unsigned
+unsigned
 do_rpo_vn (function *fn, edge entry, bitmap exit_bbs,
-	   bool iterate, bool eliminate)
+	   bool iterate, bool eliminate, vn_lookup_kind kind)
 {
   unsigned todo = 0;
+  default_vn_walk_kind = kind;
 
   /* We currently do not support region-based iteration when
      elimination is requested.  */
@@ -8164,8 +8266,7 @@ do_rpo_vn (function *fn, edge entry, bitmap exit_bbs,
 unsigned
 do_rpo_vn (function *fn, edge entry, bitmap exit_bbs)
 {
-  default_vn_walk_kind = VN_WALKREWRITE;
-  unsigned todo = do_rpo_vn (fn, entry, exit_bbs, false, true);
+  unsigned todo = do_rpo_vn (fn, entry, exit_bbs, false, true, VN_WALKREWRITE);
   free_rpo_vn ();
   return todo;
 }
@@ -8221,8 +8322,7 @@ pass_fre::execute (function *fun)
   if (iterate_p)
     loop_optimizer_init (AVOID_CFG_MODIFICATIONS);
 
-  default_vn_walk_kind = VN_WALKREWRITE;
-  todo = do_rpo_vn (fun, NULL, NULL, iterate_p, true);
+  todo = do_rpo_vn (fun, NULL, NULL, iterate_p, true, VN_WALKREWRITE);
   free_rpo_vn ();
 
   if (iterate_p)

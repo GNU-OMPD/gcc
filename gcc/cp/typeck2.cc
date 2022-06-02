@@ -467,6 +467,8 @@ cxx_incomplete_type_error (location_t loc, const_tree value, const_tree type)
 static void
 maybe_push_temp_cleanup (tree sub, vec<tree,va_gc> **flags)
 {
+  if (!flag_exceptions)
+    return;
   if (tree cleanup
       = cxx_maybe_build_cleanup (sub, tf_warning_or_error))
     {
@@ -496,6 +498,7 @@ split_nonconstant_init_1 (tree dest, tree init, bool last,
   bool array_type_p = false;
   bool complete_p = true;
   HOST_WIDE_INT num_split_elts = 0;
+  tree last_split_elt = NULL_TREE;
 
   switch (TREE_CODE (type))
     {
@@ -572,6 +575,7 @@ split_nonconstant_init_1 (tree dest, tree init, bool last,
 	      else
 		{
 		  /* Mark element for removal.  */
+		  last_split_elt = field_index;
 		  CONSTRUCTOR_ELT (init, idx)->index = NULL_TREE;
 		  if (idx < tidx)
 		    tidx = idx;
@@ -584,6 +588,7 @@ split_nonconstant_init_1 (tree dest, tree init, bool last,
 					      flags));
 
 	      /* Mark element for removal.  */
+	      last_split_elt = field_index;
 	      CONSTRUCTOR_ELT (init, idx)->index = NULL_TREE;
 	      if (idx < tidx)
 		tidx = idx;
@@ -592,6 +597,26 @@ split_nonconstant_init_1 (tree dest, tree init, bool last,
 	  else if (!initializer_constant_valid_p (value, inner_type))
 	    {
 	      tree code;
+
+	      /* Push cleanups for any preceding members with constant
+		 initialization.  */
+	      if (CLASS_TYPE_P (type))
+		for (tree prev = (last_split_elt ?
+				  DECL_CHAIN (last_split_elt)
+				  : TYPE_FIELDS (type));
+		     ; prev = DECL_CHAIN (prev))
+		  {
+		    prev = next_aggregate_field (prev);
+		    if (prev == field_index)
+		      break;
+		    tree ptype = TREE_TYPE (prev);
+		    if (type_build_dtor_call (ptype))
+		      {
+			tree pcref = build3 (COMPONENT_REF, ptype, dest, prev,
+					     NULL_TREE);
+			maybe_push_temp_cleanup (pcref, flags);
+		      }
+		  }
 
 	      /* Mark element for removal.  */
 	      CONSTRUCTOR_ELT (init, idx)->index = NULL_TREE;
@@ -645,6 +670,7 @@ split_nonconstant_init_1 (tree dest, tree init, bool last,
 		    maybe_push_temp_cleanup (sub, flags);
 		}
 
+	      last_split_elt = field_index;
 	      num_split_elts++;
 	    }
 	}
@@ -896,6 +922,7 @@ store_init_value (tree decl, tree init, vec<tree, va_gc>** cleanups, int flags)
      here it should have been digested into an actual value for the type.  */
   gcc_checking_assert (TREE_CODE (value) != CONSTRUCTOR
 		       || processing_template_decl
+		       || TREE_CODE (type) == VECTOR_TYPE
 		       || !TREE_HAS_CONSTRUCTOR (value));
 
   /* If the initializer is not a constant, fill in DECL_INITIAL with
@@ -1277,7 +1304,7 @@ digest_init_r (tree type, tree init, int nested, int flags,
 	    the first element of d, which is the B base subobject.  The base
 	    of type B is copy-initialized from the D temporary, causing
 	    object slicing.  */
-	  tree field = next_initializable_field (TYPE_FIELDS (type));
+	  tree field = next_aggregate_field (TYPE_FIELDS (type));
 	  if (field && DECL_FIELD_IS_BASE (field))
 	    {
 	      if (warning_at (loc, 0, "initializing a base class of type %qT "
@@ -1407,10 +1434,15 @@ massage_init_elt (tree type, tree init, int nested, int flags,
     new_flags |= LOOKUP_AGGREGATE_PAREN_INIT;
   init = digest_init_r (type, init, nested ? 2 : 1, new_flags, complain);
   /* When we defer constant folding within a statement, we may want to
-     defer this folding as well.  */
-  tree t = fold_non_dependent_init (init, complain);
-  if (TREE_CONSTANT (t))
-    init = t;
+     defer this folding as well.  Don't call this on CONSTRUCTORs because
+     their elements have already been folded, and we must avoid folding
+     the result of get_nsdmi.  */
+  if (TREE_CODE (init) != CONSTRUCTOR)
+    {
+      tree t = fold_non_dependent_init (init, complain);
+      if (TREE_CONSTANT (t))
+	init = t;
+    }
   return init;
 }
 
@@ -1483,6 +1515,14 @@ process_init_constructor_array (tree type, tree init, int nested, int flags,
 	      strip_array_types (TREE_TYPE (ce->value)))));
 
       picflags |= picflag_from_initializer (ce->value);
+      /* Propagate CONSTRUCTOR_PLACEHOLDER_BOUNDARY to outer
+	 CONSTRUCTOR.  */
+      if (TREE_CODE (ce->value) == CONSTRUCTOR
+	  && CONSTRUCTOR_PLACEHOLDER_BOUNDARY (ce->value))
+	{
+	  CONSTRUCTOR_PLACEHOLDER_BOUNDARY (init) = 1;
+	  CONSTRUCTOR_PLACEHOLDER_BOUNDARY (ce->value) = 0;
+	}
     }
 
   /* No more initializers. If the array is unbounded, we are done. Otherwise,
@@ -1528,6 +1568,14 @@ process_init_constructor_array (tree type, tree init, int nested, int flags,
 	      }
 
 	    picflags |= picflag_from_initializer (next);
+	    /* Propagate CONSTRUCTOR_PLACEHOLDER_BOUNDARY to outer
+	       CONSTRUCTOR.  */
+	    if (TREE_CODE (next) == CONSTRUCTOR
+		&& CONSTRUCTOR_PLACEHOLDER_BOUNDARY (next))
+	      {
+		CONSTRUCTOR_PLACEHOLDER_BOUNDARY (init) = 1;
+		CONSTRUCTOR_PLACEHOLDER_BOUNDARY (next) = 0;
+	      }
 	    if (len > i+1)
 	      {
 		tree range = build2 (RANGE_EXPR, size_type_node,
@@ -1722,6 +1770,13 @@ process_init_constructor_record (tree type, tree init, int nested, int flags,
       if (fldtype != TREE_TYPE (field))
 	next = cp_convert_and_check (TREE_TYPE (field), next, complain);
       picflags |= picflag_from_initializer (next);
+      /* Propagate CONSTRUCTOR_PLACEHOLDER_BOUNDARY to outer CONSTRUCTOR.  */
+      if (TREE_CODE (next) == CONSTRUCTOR
+	  && CONSTRUCTOR_PLACEHOLDER_BOUNDARY (next))
+	{
+	  CONSTRUCTOR_PLACEHOLDER_BOUNDARY (init) = 1;
+	  CONSTRUCTOR_PLACEHOLDER_BOUNDARY (next) = 0;
+	}
       CONSTRUCTOR_APPEND_ELT (v, field, next);
     }
 
@@ -1862,6 +1917,14 @@ process_init_constructor_union (tree type, tree init, int nested, int flags,
     ce->value = massage_init_elt (TREE_TYPE (ce->index), ce->value, nested,
 				  flags, complain);
 
+  /* Propagate CONSTRUCTOR_PLACEHOLDER_BOUNDARY to outer CONSTRUCTOR.  */
+  if (ce->value
+      && TREE_CODE (ce->value) == CONSTRUCTOR
+      && CONSTRUCTOR_PLACEHOLDER_BOUNDARY (ce->value))
+    {
+      CONSTRUCTOR_PLACEHOLDER_BOUNDARY (init) = 1;
+      CONSTRUCTOR_PLACEHOLDER_BOUNDARY (ce->value) = 0;
+    }
   return picflag_from_initializer (ce->value);
 }
 
@@ -2282,7 +2345,13 @@ build_functional_cast_1 (location_t loc, tree exp, tree parms,
 	       && list_length (parms) == 1)
 	{
 	  init = TREE_VALUE (parms);
-	  if (cxx_dialect < cxx23)
+	  if (is_constrained_auto (anode))
+	    {
+	      if (complain & tf_error)
+		error_at (loc, "%<auto(x)%> cannot be constrained");
+	      return error_mark_node;
+	    }
+	  else if (cxx_dialect < cxx23)
 	    pedwarn (loc, OPT_Wc__23_extensions,
 		     "%<auto(x)%> only available with "
 		     "%<-std=c++2b%> or %<-std=gnu++2b%>");

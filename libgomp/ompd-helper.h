@@ -1,4 +1,4 @@
-/* Copyright (C) 2022 Free Software Foundation, Inc.
+/* Copyright (C) The GNU Toolchain Authors.
    Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
    This file is part of the GNU Offloading and Multi Processing Library
    (libgomp).
@@ -113,6 +113,7 @@ typedef struct _ompd_task_handle
 	    ompd_scope_address_space) \
   ompd_icv (stacksize_var, "stack size var", ompd_scope_address_space) \
   ompd_icv (debug_var, "debug var", ompd_scope_address_space) \
+  ompd_icv (ompd_state, "OMP_DEBUG", ompd_scope_address_space) \
   ompd_icv (display_affinity_var, "display affinity var", \
 	    ompd_scope_address_space) \
   ompd_icv (affinity_format_var, "affinity format var", \
@@ -147,7 +148,7 @@ enum ompd_icv
 #pragma GCC visibility push(hidden)
 #endif
 
-ompd_rc_t get_sizes (ompd_address_space_context_t *);
+ompd_rc_t gompd_get_sizes (ompd_address_space_context_t *);
 
 /* Get Local internal control variables.  */
 ompd_rc_t gompd_get_nthread (ompd_thread_handle_t *, ompd_word_t *);
@@ -185,6 +186,8 @@ ompd_rc_t gompd_get_throttled_spin_count (ompd_address_space_handle_t *,
 					  ompd_word_t *);
 ompd_rc_t gompd_get_managed_threads (ompd_address_space_handle_t *,
 				     ompd_word_t *);
+ompd_rc_t gompd_stringize_gompd_enabled (ompd_address_space_handle_t *,
+                                         const char **);
 /*End of Global ICVs.  */
 
 

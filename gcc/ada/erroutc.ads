@@ -23,7 +23,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
---  This packages contains global variables and routines common to error
+--  This package contains global variables and routines common to error
 --  reporting packages, including Errout and Prj.Err.
 
 with Table;
@@ -465,7 +465,7 @@ package Erroutc is
    --  Tests if message buffer ends with given string preceded by a space
 
    procedure Buffer_Remove (C : Character);
-   --  Remove given character fron end of buffer if it is present
+   --  Remove given character from end of buffer if it is present
 
    procedure Buffer_Remove (S : String);
    --  Removes given string from end of buffer if it is present at end of
@@ -617,8 +617,8 @@ package Erroutc is
    --  buffer with no leading zeroes output.
 
    procedure Set_Msg_Name_Buffer;
-   --  Output name from Name_Buffer, with surrounding quotes unless manual
-   --  quotation mode is in effect.
+   --  Output name from Namet.Global_Name_Buffer, with surrounding quotes
+   --  unless manual quotation mode is in effect.
 
    procedure Set_Msg_Quote;
    --  Set quote if in normal quote mode, nothing if in manual quote mode

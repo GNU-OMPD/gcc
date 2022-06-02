@@ -165,6 +165,14 @@ c_parse_init (void)
       C_SET_RID_CODE (id, RID_FIRST_INT_N + i);
       C_IS_RESERVED_WORD (id) = 1;
     }
+
+  if (flag_openmp)
+    {
+      id = get_identifier ("omp_all_memory");
+      C_SET_RID_CODE (id, RID_OMP_ALL_MEMORY);
+      C_IS_RESERVED_WORD (id) = 1;
+      ridpointers [RID_OMP_ALL_MEMORY] = id;
+    }
 }
 
 /* A parser structure recording information about the state and
@@ -7669,7 +7677,7 @@ c_parser_conditional_expression (c_parser *parser, struct c_expr *after,
   c_inhibit_evaluation_warnings -= cond.value == truthvalue_true_node;
   location_t loc1 = make_location (exp1.get_start (), exp1.src_range);
   location_t loc2 = make_location (exp2.get_start (), exp2.src_range);
-  if (__builtin_expect (omp_atomic_lhs != NULL, 0)
+  if (UNLIKELY (omp_atomic_lhs != NULL)
       && (TREE_CODE (cond.value) == GT_EXPR
 	  || TREE_CODE (cond.value) == LT_EXPR
 	  || TREE_CODE (cond.value) == EQ_EXPR)
@@ -7865,7 +7873,7 @@ c_parser_binary_expression (c_parser *parser, struct c_expr *after,
     stack[sp].expr							      \
       = convert_lvalue_to_rvalue (stack[sp].loc,			      \
 				  stack[sp].expr, true, true);		      \
-    if (__builtin_expect (omp_atomic_lhs != NULL_TREE, 0) && sp == 1	      \
+    if (UNLIKELY (omp_atomic_lhs != NULL_TREE) && sp == 1		      \
 	&& ((c_parser_next_token_is (parser, CPP_SEMICOLON)		      \
 	     && ((1 << stack[sp].prec)					      \
 		 & ((1 << PREC_BITOR) | (1 << PREC_BITXOR)		      \
@@ -10128,8 +10136,7 @@ c_parser_postfix_expression (c_parser *parser)
 	    mark_exp_read (e1.value);
 	    location_t end_loc = c_parser_peek_token (parser)->get_finish ();
 	    parens.skip_until_found_close (parser);
-	    expr.value = build1_loc (loc, PAREN_EXPR, TREE_TYPE (e1.value),
-				     e1.value);
+	    expr = parser_build_unary_op (loc, PAREN_EXPR, e1);
 	    set_c_expr_source_range (&expr, start_loc, end_loc);
 	  }
 	  break;
@@ -10202,6 +10209,13 @@ c_parser_postfix_expression (c_parser *parser)
 	  break;
 	case RID_GENERIC:
 	  expr = c_parser_generic_selection (parser);
+	  break;
+	case RID_OMP_ALL_MEMORY:
+	  gcc_assert (flag_openmp);
+	  c_parser_consume_token (parser);
+	  error_at (loc, "%<omp_all_memory%> may only be used in OpenMP "
+			 "%<depend%> clause");
+	  expr.set_error ();
 	  break;
 	default:
 	  c_parser_error (parser, "expected expression");
@@ -12772,7 +12786,9 @@ c_parser_omp_clause_name (c_parser *parser)
 	    result = PRAGMA_OMP_CLAUSE_GRAINSIZE;
 	  break;
 	case 'h':
-	  if (!strcmp ("hint", p))
+	  if (!strcmp ("has_device_addr", p))
+	    result = PRAGMA_OMP_CLAUSE_HAS_DEVICE_ADDR;
+	  else if (!strcmp ("hint", p))
 	    result = PRAGMA_OMP_CLAUSE_HINT;
 	  else if (!strcmp ("host", p))
 	    result = PRAGMA_OACC_CLAUSE_HOST;
@@ -13024,7 +13040,19 @@ c_parser_omp_variable_list (c_parser *parser,
 	  if (c_parser_next_token_is_not (parser, CPP_NAME)
 	      || c_parser_peek_token (parser)->id_kind != C_ID_ID)
 	    {
-	      struct c_expr expr = c_parser_expr_no_commas (parser, NULL);
+	      struct c_expr expr;
+	      if (kind == OMP_CLAUSE_DEPEND
+		  && c_parser_next_token_is_keyword (parser,
+						     RID_OMP_ALL_MEMORY)
+		  && (c_parser_peek_2nd_token (parser)->type == CPP_COMMA
+		      || (c_parser_peek_2nd_token (parser)->type
+			  == CPP_CLOSE_PAREN)))
+		{
+		  expr.value = ridpointers[RID_OMP_ALL_MEMORY];
+		  c_parser_consume_token (parser);
+		}
+	      else
+		expr = c_parser_expr_no_commas (parser, NULL);
 	      if (expr.value != error_mark_node)
 		{
 		  tree u = build_omp_clause (clause_loc, kind);
@@ -13144,7 +13172,16 @@ c_parser_omp_variable_list (c_parser *parser,
 		{
 		  location_t op_loc = c_parser_peek_token (parser)->location;
 		  if (c_parser_next_token_is (parser, CPP_DEREF))
-		    t = build_simple_mem_ref (t);
+		    {
+		      c_expr t_expr;
+		      t_expr.value = t;
+		      t_expr.original_code = ERROR_MARK;
+		      t_expr.original_type = NULL;
+		      set_c_expr_source_range (&t_expr, op_loc, op_loc);
+		      t_expr = convert_lvalue_to_rvalue (op_loc, t_expr,
+							 true, false);
+		      t = build_indirect_ref (op_loc, t_expr.value, RO_ARROW);
+		    }
 		  c_parser_consume_token (parser);
 		  if (!c_parser_next_token_is (parser, CPP_NAME))
 		    {
@@ -13165,6 +13202,7 @@ c_parser_omp_variable_list (c_parser *parser,
 	    case OMP_CLAUSE_REDUCTION:
 	    case OMP_CLAUSE_IN_REDUCTION:
 	    case OMP_CLAUSE_TASK_REDUCTION:
+	    case OMP_CLAUSE_HAS_DEVICE_ADDR:
 	      array_section_p = false;
 	      dims.truncate (0);
 	      while (c_parser_next_token_is (parser, CPP_OPEN_SQUARE))
@@ -14322,6 +14360,16 @@ static tree
 c_parser_omp_clause_use_device_addr (c_parser *parser, tree list)
 {
   return c_parser_omp_var_list_parens (parser, OMP_CLAUSE_USE_DEVICE_ADDR,
+				       list);
+}
+
+/* OpenMP 5.1:
+   has_device_addr ( variable-list ) */
+
+static tree
+c_parser_omp_clause_has_device_addr (c_parser *parser, tree list)
+{
+  return c_parser_omp_var_list_parens (parser, OMP_CLAUSE_HAS_DEVICE_ADDR,
 				       list);
 }
 
@@ -16019,7 +16067,7 @@ c_parser_omp_clause_affinity (c_parser *parser, tree list)
    depend ( depend-modifier , depend-kind: variable-list )
 
    depend-kind:
-     in | out | inout | mutexinoutset | depobj
+     in | out | inout | mutexinoutset | depobj | inoutset
 
    depend-modifier:
      iterator ( iterators-definition )  */
@@ -16051,6 +16099,8 @@ c_parser_omp_clause_depend (c_parser *parser, tree list)
 	kind = OMP_CLAUSE_DEPEND_IN;
       else if (strcmp ("inout", p) == 0)
 	kind = OMP_CLAUSE_DEPEND_INOUT;
+      else if (strcmp ("inoutset", p) == 0)
+	kind = OMP_CLAUSE_DEPEND_INOUTSET;
       else if (strcmp ("mutexinoutset", p) == 0)
 	kind = OMP_CLAUSE_DEPEND_MUTEXINOUTSET;
       else if (strcmp ("out", p) == 0)
@@ -16209,8 +16259,8 @@ c_parser_omp_clause_map (c_parser *parser, tree list)
       else
 	{
 	  c_parser_error (parser, "%<#pragma omp target%> with "
-				  "modifier other than %<always%> or %<close%>"
-				  "on %<map%> clause");
+				  "modifier other than %<always%> or "
+				  "%<close%> on %<map%> clause");
 	  parens.skip_until_found_close (parser);
 	  return list;
 	}
@@ -17052,6 +17102,10 @@ c_parser_omp_all_clauses (c_parser *parser, omp_clause_mask mask,
 	case PRAGMA_OMP_CLAUSE_USE_DEVICE_ADDR:
 	  clauses = c_parser_omp_clause_use_device_addr (parser, clauses);
 	  c_name = "use_device_addr";
+	  break;
+	case PRAGMA_OMP_CLAUSE_HAS_DEVICE_ADDR:
+	  clauses = c_parser_omp_clause_has_device_addr (parser, clauses);
+	  c_name = "has_device_addr";
 	  break;
 	case PRAGMA_OMP_CLAUSE_IS_DEVICE_PTR:
 	  clauses = c_parser_omp_clause_is_device_ptr (parser, clauses);
@@ -19011,12 +19065,14 @@ c_parser_omp_depobj (c_parser *parser)
 		    kind = OMP_CLAUSE_DEPEND_INOUT;
 		  else if (!strcmp ("mutexinoutset", p2))
 		    kind = OMP_CLAUSE_DEPEND_MUTEXINOUTSET;
+		  else if (!strcmp ("inoutset", p2))
+		    kind = OMP_CLAUSE_DEPEND_INOUTSET;
 		}
 	      if (kind == OMP_CLAUSE_DEPEND_SOURCE)
 		{
 		  clause = error_mark_node;
-		  error_at (c2_loc, "expected %<in%>, %<out%>, %<inout%> or "
-				    "%<mutexinoutset%>");
+		  error_at (c2_loc, "expected %<in%>, %<out%>, %<inout%>, "
+				    "%<mutexinoutset%> or %<inoutset%>");
 		}
 	      c_parens.skip_until_found_close (parser);
 	    }
@@ -21035,7 +21091,8 @@ c_parser_omp_target_exit_data (location_t loc, c_parser *parser,
 	| (OMP_CLAUSE_MASK_1 << PRAGMA_OMP_CLAUSE_DEFAULTMAP)	\
 	| (OMP_CLAUSE_MASK_1 << PRAGMA_OMP_CLAUSE_IN_REDUCTION)	\
 	| (OMP_CLAUSE_MASK_1 << PRAGMA_OMP_CLAUSE_THREAD_LIMIT)	\
-	| (OMP_CLAUSE_MASK_1 << PRAGMA_OMP_CLAUSE_IS_DEVICE_PTR))
+	| (OMP_CLAUSE_MASK_1 << PRAGMA_OMP_CLAUSE_IS_DEVICE_PTR)\
+	| (OMP_CLAUSE_MASK_1 << PRAGMA_OMP_CLAUSE_HAS_DEVICE_ADDR))
 
 static bool
 c_parser_omp_target (c_parser *parser, enum pragma_context context, bool *if_p)

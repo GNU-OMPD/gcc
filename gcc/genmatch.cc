@@ -2553,19 +2553,20 @@ expr::gen_transform (FILE *f, int indent, const char *dest, bool gimple,
 	fprintf_indent (f, indent, "_r%d = fold_build%d_loc (loc, %s, %s",
 			depth, ops.length(), opr_name, type);
       else
-	{
-	  fprintf_indent (f, indent, "{\n");
-	  fprintf_indent (f, indent, "  _r%d = maybe_build_call_expr_loc (loc, "
-			  "%s, %s, %d", depth, opr_name, type, ops.length());
-	}
+	fprintf_indent (f, indent, "_r%d = maybe_build_call_expr_loc (loc, "
+			"%s, %s, %d", depth, opr_name, type, ops.length());
       for (unsigned i = 0; i < ops.length (); ++i)
 	fprintf (f, ", _o%d[%u]", depth, i);
       fprintf (f, ");\n");
       if (opr->kind != id_base::CODE)
 	{
-	  fprintf_indent (f, indent, "  if (!_r%d)\n", depth);
-	  fprintf_indent (f, indent, "    goto %s;\n", fail_label);
-	  fprintf_indent (f, indent, "}\n");
+	  fprintf_indent (f, indent, "if (!_r%d)\n", depth);
+	  fprintf_indent (f, indent, "  goto %s;\n", fail_label);
+	}
+      if (force_leaf)
+	{
+	  fprintf_indent (f, indent, "if (EXPR_P (_r%d))\n", depth);
+	  fprintf_indent (f, indent, "  goto %s;\n", fail_label);
 	}
       if (*opr == CONVERT_EXPR)
 	{
@@ -3357,9 +3358,9 @@ dt_simplify::gen_1 (FILE *f, int indent, bool gimple, operand *result)
     }
 
   if (s->kind == simplify::SIMPLIFY)
-    fprintf_indent (f, indent, "if (__builtin_expect (!dbg_cnt (match), 0)) goto %s;\n", fail_label);
+    fprintf_indent (f, indent, "if (UNLIKELY (!dbg_cnt (match))) goto %s;\n", fail_label);
 
-  fprintf_indent (f, indent, "if (__builtin_expect (dump_file && (dump_flags & TDF_FOLDING), 0)) "
+  fprintf_indent (f, indent, "if (UNLIKELY (dump_file && (dump_flags & TDF_FOLDING))) "
 	   "fprintf (dump_file, \"%s ",
 	   s->kind == simplify::SIMPLIFY
 	   ? "Applying pattern" : "Matching expression");
@@ -4297,9 +4298,6 @@ parser::parse_expr ()
       && token->type == CPP_NOT
       && !(token->flags & PREV_WHITE))
     {
-      if (!gimple)
-	fatal_at (token, "forcing simplification to a leaf is not supported "
-		  "for GENERIC");
       eat_token (CPP_NOT);
       e->force_leaf = true;
     }

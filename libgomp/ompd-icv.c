@@ -1,4 +1,4 @@
-/* Copyright (C) 2022 Free Software Foundation, Inc.
+/* Copyright (C) The GNU Toolchain Authors.
    Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
    This file is part of the GNU Offloading and Multi Processing Library
    (libgomp).
@@ -95,63 +95,44 @@ ompd_get_icv_from_scope (void *handle, ompd_scope_t scope, ompd_icv_id_t icv_id,
       default:
 	return ompd_rc_bad_input;
     }
-  /* NO cuda for now.  */
+  /* No offloading support for now.  */
+  ompd_address_space_handle_t *ashandle
+    = (ompd_address_space_handle_t *)handle;
   if (device == OMPD_DEVICE_KIND_HOST)
     {
       switch (icv_id)
 	{
 	  case gompd_icv_cancellation_var:
-	    return
-	      gompd_get_cancellation ((ompd_address_space_handle_t *) handle,
-				      icv_value);
+	    return gompd_get_cancellation (ashandle, icv_value);
 	  case gompd_icv_max_task_priority_var:
-	    return gompd_get_max_task_priority ((ompd_address_space_handle_t *)
-						handle, icv_value);
+	    return gompd_get_max_task_priority (ashandle, icv_value);
 	  case gompd_icv_stacksize_var:
-	    return gompd_get_stacksize ((ompd_address_space_handle_t *) handle,
-					icv_value);
+	    return gompd_get_stacksize (ashandle, icv_value);
 	  case gompd_icv_debug_var:
-	    return gompd_get_debug ((ompd_address_space_handle_t *) handle,
-				    icv_value);
+	    return gompd_get_debug (ashandle, icv_value);
 	  case gompd_icv_display_affinity_var:
-	    return
-	      gompd_get_display_affinity ((ompd_address_space_handle_t *)
-					  handle, icv_value);
+	    return gompd_get_display_affinity (ashandle, icv_value);
 	  case gompd_icv_affinity_format_var:
 	    return ompd_rc_incompatible;
 	  case gompd_icv_affinity_format_len_var:
-	    return gompd_get_affinity_format_len
-		    ((ompd_address_space_handle_t *) handle, icv_value);
-	   case gompd_icv_wait_policy_var:
-	     return
-	       gompd_get_wait_policy ((ompd_address_space_handle_t *)handle,
-				      icv_value);
-	   case gompd_icv_num_teams_var:
-	     return gompd_get_num_teams ((ompd_address_space_handle_t *)handle,
-					 icv_value);
-	   case gompd_icv_teams_thread_limit_var:
-	     return
-	       gompd_get_teams_thread_limit ((ompd_address_space_handle_t *)
-					     handle, icv_value);
-	   case gompd_icv_spin_count_var:
-	     return
-	       gompd_get_spin_count ((ompd_address_space_handle_t *) handle,
-				     icv_value);
-	   case gompd_icv_num_proc_var:
-	     return
-	       gompd_get_available_cpus ((ompd_address_space_handle_t *) handle,
-					 icv_value);
-	   case gompd_icv_throttled_spin_count_var:
-	     return
-	       gompd_get_throttled_spin_count ((ompd_address_space_handle_t *)
-					       handle, icv_value);
-	   case gompd_icv_managed_threads_var:
-	     return
-	       gompd_get_managed_threads ((ompd_address_space_handle_t *)
-					  handle, icv_value);
+	    return gompd_get_affinity_format_len (ashandle, icv_value);
+	  case gompd_icv_wait_policy_var:
+	    return gompd_get_wait_policy (ashandle, icv_value);
+	  case gompd_icv_num_teams_var:
+	    return gompd_get_num_teams (ashandle, icv_value);
+	  case gompd_icv_teams_thread_limit_var:
+	    return gompd_get_teams_thread_limit (ashandle, icv_value);
+	  case gompd_icv_spin_count_var:
+	    return gompd_get_spin_count (ashandle, icv_value);
+	  case gompd_icv_num_proc_var:
+	    return gompd_get_available_cpus (ashandle, icv_value);
+	  case gompd_icv_throttled_spin_count_var:
+	    return gompd_get_throttled_spin_count (ashandle, icv_value);
+	  case gompd_icv_managed_threads_var:
+	    return gompd_get_managed_threads (ashandle, icv_value);
 	  default:
 	    return ompd_rc_unsupported;
-	 }
+	}
     }
     return ompd_rc_error;
 }
@@ -184,18 +165,20 @@ ompd_get_icv_string_from_scope (void *handle, ompd_scope_t scope,
       default:
 	return ompd_rc_bad_input;
     }
-  /* No cuda.  */
+  /* No offloading support for now.  */
+  ompd_address_space_handle_t *ashandle
+    = (ompd_address_space_handle_t *)handle;
   if (device == OMPD_DEVICE_KIND_HOST)
     {
       switch (icv_id)
-	 {
+	{
 	  case gompd_icv_affinity_format_var:
-	    return
-	      gompd_get_affinity_format ((ompd_address_space_handle_t *) handle,
-					 icv_value);
+	    return gompd_get_affinity_format (ashandle, icv_value);
+	  case gompd_icv_ompd_state:
+	    return gompd_stringize_gompd_enabled (ashandle, icv_value);
 	  default:
 	    return ompd_rc_unsupported;
-	 }
+	}
     }
   return ompd_rc_error;
 }

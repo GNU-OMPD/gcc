@@ -128,7 +128,7 @@ static const char *str_license = "plugin_is_GPL_compatible";
    structure to be inserted into the hash table.  */
 
 static hashval_t
-htab_hash_plugin (const PTR p)
+htab_hash_plugin (const void *p)
 {
   const struct plugin_name_args *plugin = (const struct plugin_name_args *) p;
   return htab_hash_string (plugin->base_name);
@@ -1006,6 +1006,6 @@ default_plugin_dir_name (void)
 {
   if (!plugindir_string)
     fatal_error (input_location,
-		 "%<-iplugindir%> <dir> option not passed from the gcc driver");
+		 "%<-iplugindir%> option not passed from the gcc driver");
   return plugindir_string;
 }

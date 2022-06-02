@@ -37,9 +37,9 @@ along with GCC; see the file COPYING3.  If not see
 #include "stor-layout.h"
 #include "print-tree.h"
 #include "cfganal.h"
+#include "gimple-iterator.h"
 #include "gimple-fold.h"
 #include "tree-eh.h"
-#include "gimple-iterator.h"
 #include "gimplify-me.h"
 #include "gimple-walk.h"
 #include "tree-cfg.h"
@@ -4240,8 +4240,7 @@ verify_gimple_assign_ternary (gassign *stmt)
       return true;
     }
 
-  if ((rhs_code == COND_EXPR
-       ? !is_gimple_condexpr (rhs1) : !is_gimple_val (rhs1))
+  if (!is_gimple_val (rhs1)
       || !is_gimple_val (rhs2)
       || !is_gimple_val (rhs3))
     {
@@ -4284,17 +4283,8 @@ verify_gimple_assign_ternary (gassign *stmt)
 	  debug_generic_expr (rhs1_type);
 	  return true;
 	}
-      if (!is_gimple_val (rhs1))
-	return true;
       /* Fallthrough.  */
     case COND_EXPR:
-      if (!is_gimple_val (rhs1)
-	  && (!is_gimple_condexpr (rhs1)
-	      || verify_gimple_comparison (TREE_TYPE (rhs1),
-					   TREE_OPERAND (rhs1, 0),
-					   TREE_OPERAND (rhs1, 1),
-					   TREE_CODE (rhs1))))
-	return true;
       if (!useless_type_conversion_p (lhs_type, rhs2_type)
 	  || !useless_type_conversion_p (lhs_type, rhs3_type))
 	{

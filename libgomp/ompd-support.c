@@ -1,4 +1,4 @@
-/* Copyright (C) 2022 Free Software Foundation, Inc.
+/* Copyright (C) The GNU Toolchain Authors.
    Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
    This file is part of the GNU Offloading and Multi Processing Library
    (libgomp).
@@ -37,7 +37,7 @@ const char **ompd_dll_locations = NULL;
 __UINT64_TYPE__ gompd_state;
 
 void
-gompd_load ()
+gompd_load (void)
 {
   /* Get the offset of the struct members.  */
   #define gompd_init_access(t, m)  \
@@ -74,47 +74,47 @@ gompd_load ()
 /* Dummy functions. they shoud not be optimized.  */
 
 void __attribute__ ((noipa))
-ompd_dll_locations_valid ()
+ompd_dll_locations_valid (void)
 {
 }
 
 void __attribute__ ((noipa))
-ompd_bp_parallel_begin ()
+ompd_bp_parallel_begin (void)
 {
 }
 
 void __attribute__ ((noipa))
-ompd_bp_parallel_end ()
+ompd_bp_parallel_end (void)
 {
 }
 
 void __attribute__ ((noipa))
-ompd_bp_task_begin ()
+ompd_bp_task_begin (void)
 {
 }
 
 void __attribute__ ((noipa))
-ompd_bp_task_end ()
+ompd_bp_task_end (void)
 {
 }
 
 void __attribute__ ((noipa))
-ompd_bp_thread_begin ()
+ompd_bp_thread_begin (void)
 {
 }
 
 void __attribute__ ((noipa))
-ompd_bp_thread_end ()
+ompd_bp_thread_end (void)
 {
 }
 
 void __attribute__ ((noipa))
-ompd_bp_device_begin ()
+ompd_bp_device_begin (void)
 {
 }
 
 void __attribute__ ((noipa))
-ompd_bp_device_end ()
+ompd_bp_device_end (void)
 {
 }
 #endif /* __ELF__*/

@@ -32,6 +32,8 @@
 #if __cplusplus > 202002L
 #include <atomic>
 
+#define __cpp_lib_stdatomic_h 202011L
+
 #define _Atomic(_Tp) std::atomic<_Tp>
 
 using std::memory_order;
@@ -111,6 +113,8 @@ using std::atomic_fetch_sub;
 using std::atomic_fetch_sub_explicit;
 using std::atomic_fetch_or;
 using std::atomic_fetch_or_explicit;
+using std::atomic_fetch_xor;
+using std::atomic_fetch_xor_explicit;
 using std::atomic_fetch_and;
 using std::atomic_fetch_and_explicit;
 using std::atomic_flag_test_and_set;

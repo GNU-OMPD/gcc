@@ -2793,20 +2793,23 @@ package body Exp_Ch9 is
                 Expression => Make_Integer_Literal (Loc, 1));
 
          else
-            pragma Assert (Present (Ret));
+            --  Ranges are in increasing order, so last one doesn't need guard
 
-            if Nkind (Ret) = N_If_Statement then
+            declare
+               Nod : constant Node_Id := Last (Elsif_Parts (Ret));
+            begin
+               Remove (Nod);
+               Set_Else_Statements (Ret, Then_Statements (Nod));
 
-               --  Ranges are in increasing order, so last one doesn't need
-               --  guard.
+               --  If Elsif_Parts becomes empty then remove it entirely, as
+               --  otherwise we would violate the invariant of If_Statement
+               --  node described in Sinfo.
 
-               declare
-                  Nod : constant Node_Id := Last (Elsif_Parts (Ret));
-               begin
-                  Remove (Nod);
-                  Set_Else_Statements (Ret, Then_Statements (Nod));
-               end;
-            end if;
+               if Is_Empty_List (Elsif_Parts (Ret)) then
+                  pragma Assert (Elsif_Parts (Ret) /= No_List);
+                  Set_Elsif_Parts (Ret, No_List);
+               end if;
+            end;
          end if;
       end if;
 
@@ -3707,7 +3710,8 @@ package body Exp_Ch9 is
 
       Analyze_Statements (Bod_Stmts);
 
-      Set_Scope (Entity (Identifier (First (Bod_Stmts))), Bod_Id);
+      Set_Scope (Entity (Identifier (First (Bod_Stmts))),
+                 Protected_Body_Subprogram (Ent));
 
       Reset_Scopes_To
         (First (Bod_Stmts), Entity (Identifier (First (Bod_Stmts))));
@@ -6338,7 +6342,7 @@ package body Exp_Ch9 is
 
             when N_Expression_With_Actions =>
                --  this may occur in the case of a Count attribute reference
-               if Original_Node (N) /= N
+               if Is_Rewrite_Substitution (N)
                  and then Is_Pure_Barrier (Original_Node (N)) /= Abandon
                then
                   return Skip;
@@ -7811,7 +7815,9 @@ package body Exp_Ch9 is
 
          Hdle := New_List (Build_Abort_Block_Handler (Loc));
 
-         Prepend_To (Astats, Build_Runtime_Call (Loc, RE_Abort_Undefer));
+         if Abort_Allowed then
+            Prepend_To (Astats, Build_Runtime_Call (Loc, RE_Abort_Undefer));
+         end if;
 
          Abortable_Block :=
            Make_Block_Statement (Loc,

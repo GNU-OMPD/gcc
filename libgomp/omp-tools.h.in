@@ -1,4 +1,4 @@
-/* Copyright (C) 2022 Free Software Foundation, Inc.
+/* Copyright (C) The GNU Toolchain Authors.
    Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
    This file is part of the GNU Offloading and Multi Processing Library
    (libgomp).
@@ -33,13 +33,7 @@ extern "C" {
 
 extern const char **ompd_dll_locations;
 
-#ifdef __ELF__
-#define ompd_dll_locations_valid() \
-  __asm__ __volatile__ (".globl ompd_dll_locations_valid\n\t" \
-			"ompd_dll_locations_valid:")
-#else
 extern void ompd_dll_locations_valid (void) __GOMPD_NOTHROW;
-#endif /* __ELF__ */
 
 typedef __UINT64_TYPE__ ompd_size_t;
 typedef __UINT64_TYPE__ ompd_wait_id_t;
@@ -271,33 +265,6 @@ ompd_rc_t ompd_get_icv_string_from_scope (void *, ompd_scope_t, ompd_icv_id_t,
 ompd_rc_t ompd_get_tool_data (void *, ompd_scope_t, ompd_word_t *,
 			      ompd_address_t *) __GOMPD_NOTHROW;
 
-#ifdef __ELF__
-#define ompd_bp_parallel_begin() \
-  __asm__ __volatile__ (".globl ompd_bp_parallel_begin\n\t" \
-			"ompd_bp_parallel_begin:")
-#define ompd_bp_parallel_end() \
-  __asm__ __volatile__ (".globl ompd_bp_parallel_end\n\t" \
-			"ompd_bp_parallel_end:")
-#define ompd_bp_task_begin() \
-  __asm__ __volatile__ (".globl ompd_bp_task_begin\n\t" \
-			"ompd_bp_task_begin:")
-#define ompd_bp_task_end() \
-  __asm__ __volatile__ (".globl ompd_bp_task_end\n\t" \
-			"ompd_bp_task_end:")
-#define ompd_bp_thread_begin() \
-  __asm__ __volatile__ (".globl ompd_bp_thread_begin\n\t" \
-			"ompd_bp_thread_begin:")
-#define ompd_bp_thread_end() \
-  __asm__ __volatile__ (".globl ompd_bp_thread_end\n\t" \
-			"ompd_bp_thread_end:")
-#define ompd_bp_device_begin() \
-  __asm__ __volatile__ (".globl ompd_bp_device_begin\n\t" \
-			"ompd_bp_device_end:")
-#define ompd_bp_device_end() \
-  __asm__ __volatile__ (".globl ompd_bp_device_end\n\t" \
-			"ompd_bp_device_end:")
-#else
-
 extern void ompd_bp_parallel_begin (void) __GOMPD_NOTHROW;
 extern void ompd_bp_parallel_end (void) __GOMPD_NOTHROW;
 
@@ -309,7 +276,6 @@ extern void ompd_bp_thread_end (void) __GOMPD_NOTHROW;
 
 extern void ompd_bp_device_begin (void) __GOMPD_NOTHROW;
 extern void ompd_bp_device_end (void) __GOMPD_NOTHROW;
-#endif /* __ELF__ */
 
 #define ompd_segment_none  ((ompd_seg_t) 0)
 #define ompd_icv_undefined ((ompd_icv_id_t) 0)

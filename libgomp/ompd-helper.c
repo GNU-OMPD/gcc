@@ -1,4 +1,4 @@
-/* Copyright (C) 2022 Free Software Foundation, Inc.
+/* Copyright (C) The GNU Toolchain Authors.
    Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
    This file is part of the GNU Offloading and Multi Processing Library
    (libgomp).
@@ -229,10 +229,35 @@ gompd_get_managed_threads (ompd_address_space_handle_t *ah, ompd_word_t *man_th)
   return ret;
 }
 
+ompd_rc_t
+gompd_get_gompd_enabled (ompd_address_space_handle_t *ah, const char **string)
+{
+  CHECK (ah);
+  ompd_word_t temp = 0;
+  ompd_rc_t ret;
+  ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
+  GET_VALUE (ah->context, NULL, "gompd_enabled", temp, temp,
+             target_sizes.sizeof_int, 1, ret, symbol_addr);
+  static const char *temp_string = "disabled";
+  if (temp == 1)
+    temp_string = "enabled";
+  else if (temp == -1)
+    temp_string = "undefined";
+  *string = temp_string;
+  return ret;
+}
+
+ompd_rc_t
+gompd_stringize_gompd_enabled (ompd_address_space_handle_t *ah,
+                               const char **string)
+{
+  return gompd_get_gompd_enabled (ah, string);
+}
+
 /* End of global ICVs functions.  */
 
 ompd_rc_t
-get_sizes (ompd_address_space_context_t *context)
+gompd_get_sizes (ompd_address_space_context_t *context)
 {
   if (context == NULL)
     return ompd_rc_bad_input;

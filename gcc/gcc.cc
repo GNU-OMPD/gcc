@@ -1462,13 +1462,13 @@ static const struct compiler default_compilers[] =
 		    cc1 -fpreprocessed %{save-temps*:%b.i} %{!save-temps*:%g.i} \
 			%(cc1_options)\
 			%{!fsyntax-only:%{!S:-o %g.s} \
-			    %{!fdump-ada-spec*:%{!o*:--output-pch=%i.gch}\
-					       %W{o*:--output-pch=%*}}%V}}\
+			    %{!fdump-ada-spec*:%{!o*:--output-pch %i.gch}\
+					       %W{o*:--output-pch %*}}%V}}\
 	  %{!save-temps*:%{!traditional-cpp:%{!no-integrated-cpp:\
 		cc1 %(cpp_unique_options) %(cc1_options)\
 		    %{!fsyntax-only:%{!S:-o %g.s} \
-		        %{!fdump-ada-spec*:%{!o*:--output-pch=%i.gch}\
-					   %W{o*:--output-pch=%*}}%V}}}}}}}", 0, 0, 0},
+		        %{!fdump-ada-spec*:%{!o*:--output-pch %i.gch}\
+					   %W{o*:--output-pch %*}}%V}}}}}}}", 0, 0, 0},
   {".i", "@cpp-output", 0, 0, 0},
   {"@cpp-output",
    "%{!M:%{!MM:%{!E:cc1 -fpreprocessed %i %(cc1_options) %{!fsyntax-only:%(invoke_as)}}}}", 0, 0, 0},
@@ -3758,7 +3758,8 @@ display_help (void)
 
   fputs (_("  -pass-exit-codes         Exit with highest error code from a phase.\n"), stdout);
   fputs (_("  --help                   Display this information.\n"), stdout);
-  fputs (_("  --target-help            Display target specific command line options.\n"), stdout);
+  fputs (_("  --target-help            Display target specific command line options "
+	   "(including assembler and linker options).\n"), stdout);
   fputs (_("  --help={common|optimizers|params|target|warnings|[^]{joined|separate|undocumented}}[,...].\n"), stdout);
   fputs (_("                           Display specific types of command line options.\n"), stdout);
   if (! verbose_flag)

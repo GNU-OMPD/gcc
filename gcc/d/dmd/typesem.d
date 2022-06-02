@@ -210,6 +210,9 @@ private void resolveHelper(TypeQualified mt, const ref Loc loc, Scope* sc, Dsymb
             error(loc, "undefined identifier `%s`, did you mean %s `%s`?", p, s2.kind(), s2.toChars());
         else if (const q = Scope.search_correct_C(id))
             error(loc, "undefined identifier `%s`, did you mean `%s`?", p, q);
+        else if ((id == Id.This   && sc.getStructClassScope()) ||
+                 (id == Id._super && sc.getClassScope()))
+            error(loc, "undefined identifier `%s`, did you mean `typeof(%s)`?", p, p);
         else
             error(loc, "undefined identifier `%s`", p);
 
@@ -273,7 +276,7 @@ private void resolveHelper(TypeQualified mt, const ref Loc loc, Scope* sc, Dsymb
             // Same check as in Expression.semanticY(DotIdExp)
             else if (sm.isPackage() && checkAccess(sc, sm.isPackage()))
             {
-                // @@@DEPRECATED_2.096@@@
+                // @@@DEPRECATED_2.106@@@
                 // Should be an error in 2.106. Just remove the deprecation call
                 // and uncomment the null assignment
                 deprecation(loc, "%s %s is not accessible here, perhaps add 'static import %s;'", sm.kind(), sm.toPrettyChars(), sm.toPrettyChars());
@@ -663,9 +666,13 @@ extern(C++) Type typeSemantic(Type type, const ref Loc loc, Scope* sc)
 
     Type visitType(Type t)
     {
+        // @@@DEPRECATED_2.110@@@
+        // Use of `cent` and `ucent` has always been an error.
+        // Starting from 2.100, recommend core.int128 as a replace for the
+        // lack of compiler support.
         if (t.ty == Tint128 || t.ty == Tuns128)
         {
-            .error(loc, "`cent` and `ucent` types not implemented");
+            .error(loc, "`cent` and `ucent` types are obsolete, use `core.int128.Cent` instead");
             return error();
         }
 
@@ -971,7 +978,7 @@ extern(C++) Type typeSemantic(Type type, const ref Loc loc, Scope* sc)
             // duplicate a part of StructDeclaration::semanticTypeInfoMembers
             //printf("AA = %s, key: xeq = %p, xerreq = %p xhash = %p\n", toChars(), sd.xeq, sd.xerreq, sd.xhash);
 
-            if (sd.xeq && sd.xeq.generated && sd.xeq._scope && sd.xeq.semanticRun < PASS.semantic3done)
+            if (sd.xeq && sd.xeq.isGenerated() && sd.xeq._scope && sd.xeq.semanticRun < PASS.semantic3done)
             {
                 uint errors = global.startGagging();
                 sd.xeq.semantic3(sd.xeq._scope);
@@ -1147,8 +1154,8 @@ extern(C++) Type typeSemantic(Type type, const ref Loc loc, Scope* sc)
             //printf("already done\n");
             return mtype;
         }
-        //printf("TypeFunction::semantic() this = %p\n", this);
-        //printf("TypeFunction::semantic() %s, sc.stc = %llx, fargs = %p\n", toChars(), sc.stc, fargs);
+        //printf("TypeFunction::semantic() this = %p\n", mtype);
+        //printf("TypeFunction::semantic() %s, sc.stc = %llx\n", mtype.toChars(), sc.stc);
 
         bool errors = false;
 
@@ -1185,6 +1192,8 @@ extern(C++) Type typeSemantic(Type type, const ref Loc loc, Scope* sc)
             tf.isref = true;
         if (sc.stc & STC.return_)
             tf.isreturn = true;
+        if (sc.stc & STC.returnScope)
+            tf.isreturnscope = true;
         if (sc.stc & STC.returninferred)
             tf.isreturninferred = true;
         if (sc.stc & STC.scope_)
@@ -1211,6 +1220,9 @@ extern(C++) Type typeSemantic(Type type, const ref Loc loc, Scope* sc)
             tf.islive = true;
 
         tf.linkage = sc.linkage;
+        if (tf.linkage == LINK.system)
+            tf.linkage = target.systemLinkage();
+
         version (none)
         {
             /* If the parent is @safe, then this function defaults to safe
@@ -1295,7 +1307,7 @@ extern(C++) Type typeSemantic(Type type, const ref Loc loc, Scope* sc)
             // default arg must be an lvalue
             if (isRefOrOut && !isAuto &&
                 !(global.params.previewIn && (fparam.storageClass & STC.in_)) &&
-                !(global.params.rvalueRefParam))
+                global.params.rvalueRefParam != FeatureState.enabled)
                 e = e.toLvalue(sc, e);
 
             fparam.defaultArg = e;
@@ -1422,12 +1434,6 @@ extern(C++) Type typeSemantic(Type type, const ref Loc loc, Scope* sc)
                     errors = true;
                 }
 
-                if ((fparam.storageClass & (STC.ref_ | STC.wild)) == (STC.ref_ | STC.wild))
-                {
-                    // 'ref inout' implies 'return'
-                    fparam.storageClass |= STC.return_;
-                }
-
                 if (fparam.storageClass & STC.return_)
                 {
                     if (fparam.isReference())
@@ -1454,6 +1460,17 @@ extern(C++) Type typeSemantic(Type type, const ref Loc loc, Scope* sc)
                         {
                             fparam.storageClass &= ~STC.return_;   // https://issues.dlang.org/show_bug.cgi?id=18963
                         }
+                    }
+
+                    if (i + 1 == dim && tf.parameterList.varargs == VarArg.typesafe &&
+                        (t.isTypeDArray() || t.isTypeClass()))
+                    {
+                        /* This is because they can be constructed on the stack
+                         * https://dlang.org/spec/function.html#typesafe_variadic_functions
+                         */
+                        .error(loc, "typesafe variadic function parameter `%s` of type `%s` cannot be marked `return`",
+                            fparam.ident ? fparam.ident.toChars() : "", t.toChars());
+                        errors = true;
                     }
                 }
 
@@ -1484,16 +1501,6 @@ extern(C++) Type typeSemantic(Type type, const ref Loc loc, Scope* sc)
 
                 /* Scope attribute is not necessary if the parameter type does not have pointers
                  */
-                /* Constructors are treated as if they are being returned through the hidden parameter,
-                 * which is by ref, and the ref there is ignored.
-                 */
-                const returnByRef = tf.isref && !tf.isctor;
-                if (!returnByRef && isRefReturnScope(fparam.storageClass))
-                {
-                    /* if `ref return scope`, evaluate to `ref` `return scope`
-                     */
-                    fparam.storageClass |= STC.returnScope;
-                }
                 const sr = buildScopeRef(fparam.storageClass);
                 switch (sr)
                 {
@@ -1512,17 +1519,6 @@ extern(C++) Type typeSemantic(Type type, const ref Loc loc, Scope* sc)
 
                     default:
                         break;
-                }
-
-                /* now set STC.returnScope based only on tf.isref. This is inconsistent, as mentioned above,
-                 * but necessary for compatibility for now.
-                 */
-                fparam.storageClass &= ~STC.returnScope;
-                if (!tf.isref && isRefReturnScope(fparam.storageClass))
-                {
-                    /* if `ref return scope`, evaluate to `ref` `return scope`
-                     */
-                    fparam.storageClass |= STC.returnScope;
                 }
 
                 // Remove redundant storage classes for type, they are already applied
@@ -1792,110 +1788,18 @@ extern(C++) Type typeSemantic(Type type, const ref Loc loc, Scope* sc)
 
     Type visitTraits(TypeTraits mtype)
     {
-        if (mtype.ty == Terror)
-            return mtype;
+        Expression e;
+        Type t;
+        Dsymbol s;
+        mtype.resolve(loc, sc, e, t, s);
 
-        const inAlias = (sc.flags & SCOPE.alias_) != 0;
-        if (mtype.exp.ident != Id.allMembers &&
-            mtype.exp.ident != Id.derivedMembers &&
-            mtype.exp.ident != Id.getMember &&
-            mtype.exp.ident != Id.parent &&
-            mtype.exp.ident != Id.child &&
-            mtype.exp.ident != Id.toType &&
-            mtype.exp.ident != Id.getOverloads &&
-            mtype.exp.ident != Id.getVirtualFunctions &&
-            mtype.exp.ident != Id.getVirtualMethods &&
-            mtype.exp.ident != Id.getAttributes &&
-            mtype.exp.ident != Id.getUnitTests &&
-            mtype.exp.ident != Id.getAliasThis)
-        {
-            static immutable (const(char)*)[2] ctxt = ["as type", "in alias"];
-            .error(mtype.loc, "trait `%s` is either invalid or not supported %s",
-                 mtype.exp.ident.toChars, ctxt[inAlias]);
-            mtype.ty = Terror;
-            return mtype;
-        }
-
-        import dmd.traits : semanticTraits;
-        Type result;
-
-        if (Expression e = semanticTraits(mtype.exp, sc))
-        {
-            switch (e.op)
-            {
-            case EXP.dotVariable:
-                mtype.sym = e.isDotVarExp().var;
-                break;
-            case EXP.variable:
-                mtype.sym = e.isVarExp().var;
-                break;
-            case EXP.function_:
-                auto fe = e.isFuncExp();
-                mtype.sym = fe.td ? fe.td : fe.fd;
-                break;
-            case EXP.dotTemplateDeclaration:
-                mtype.sym = e.isDotTemplateExp().td;
-                break;
-            case EXP.dSymbol:
-                mtype.sym = e.isDsymbolExp().s;
-                break;
-            case EXP.template_:
-                mtype.sym = e.isTemplateExp().td;
-                break;
-            case EXP.scope_:
-                mtype.sym = e.isScopeExp().sds;
-                break;
-            case EXP.tuple:
-                TupleExp te = e.toTupleExp();
-                Objects* elems = new Objects(te.exps.dim);
-                foreach (i; 0 .. elems.dim)
-                {
-                    auto src = (*te.exps)[i];
-                    switch (src.op)
-                    {
-                    case EXP.type:
-                        (*elems)[i] = src.isTypeExp().type;
-                        break;
-                    case EXP.dotType:
-                        (*elems)[i] = src.isDotTypeExp().sym.isType();
-                        break;
-                    case EXP.overloadSet:
-                        (*elems)[i] = src.isOverExp().type;
-                        break;
-                    default:
-                        if (auto sym = isDsymbol(src))
-                            (*elems)[i] = sym;
-                        else
-                            (*elems)[i] = src;
-                    }
-                }
-                TupleDeclaration td = new TupleDeclaration(e.loc, Identifier.generateId("__aliastup"), elems);
-                mtype.sym = td;
-                break;
-            case EXP.dotType:
-                result = e.isDotTypeExp().sym.isType();
-                break;
-            case EXP.type:
-                result = e.isTypeExp().type;
-                break;
-            case EXP.overloadSet:
-                result = e.isOverExp().type;
-                break;
-            default:
-                break;
-            }
-        }
-
-        if (result)
-            result = result.addMod(mtype.mod);
-        if (!inAlias && !result)
+        if (!t)
         {
             if (!global.errors)
                 .error(mtype.loc, "`%s` does not give a valid type", mtype.toChars);
             return error();
         }
-
-        return result;
+        return t;
     }
 
     Type visitReturn(TypeReturn mtype)
@@ -2040,6 +1944,22 @@ extern(C++) Type typeSemantic(Type type, const ref Loc loc, Scope* sc)
             return mtype.resolved;
         }
 
+        /* Find the current scope by skipping tag scopes.
+         * In C, tag scopes aren't considered scopes.
+         */
+        Scope* sc2 = sc;
+        while (1)
+        {
+            sc2 = sc2.inner();
+            auto scopesym = sc2.scopesym;
+            if (scopesym.isStructDeclaration())
+            {
+                sc2 = sc2.enclosing;
+                continue;
+            }
+            break;
+        }
+
         /* Declare mtype as a struct/union/enum declaration
          */
         void declareTag()
@@ -2047,22 +1967,22 @@ extern(C++) Type typeSemantic(Type type, const ref Loc loc, Scope* sc)
             void declare(ScopeDsymbol sd)
             {
                 sd.members = mtype.members;
-                auto scopesym = sc.inner().scopesym;
+                auto scopesym = sc2.inner().scopesym;
                 if (scopesym.members)
                     scopesym.members.push(sd);
                 if (scopesym.symtab && !scopesym.symtabInsert(sd))
                 {
                     Dsymbol s2 = scopesym.symtabLookup(sd, mtype.id);
-                    handleTagSymbols(*sc, sd, s2, scopesym);
+                    handleTagSymbols(*sc2, sd, s2, scopesym);
                 }
-                sd.parent = sc.parent;
-                sd.dsymbolSemantic(sc);
+                sd.parent = sc2.parent;
+                sd.dsymbolSemantic(sc2);
             }
 
             switch (mtype.tok)
             {
                 case TOK.enum_:
-                    auto ed = new EnumDeclaration(mtype.loc, mtype.id, Type.tint32);
+                    auto ed = new EnumDeclaration(mtype.loc, mtype.id, mtype.base);
                     declare(ed);
                     mtype.resolved = visitEnum(new TypeEnum(ed));
                     break;
@@ -2098,7 +2018,7 @@ extern(C++) Type typeSemantic(Type type, const ref Loc loc, Scope* sc)
         /* look for pre-existing declaration
          */
         Dsymbol scopesym;
-        auto s = sc.search(mtype.loc, mtype.id, &scopesym, IgnoreErrors | TagNameSpace);
+        auto s = sc2.search(mtype.loc, mtype.id, &scopesym, IgnoreErrors | TagNameSpace);
         if (!s || s.isModule())
         {
             // no pre-existing declaration, so declare it
@@ -2111,7 +2031,7 @@ extern(C++) Type typeSemantic(Type type, const ref Loc loc, Scope* sc)
         /* A redeclaration only happens if both declarations are in
          * the same scope
          */
-        const bool redeclar = (scopesym == sc.inner().scopesym);
+        const bool redeclar = (scopesym == sc2.inner().scopesym);
 
         if (redeclar)
         {
@@ -2154,7 +2074,7 @@ extern(C++) Type typeSemantic(Type type, const ref Loc loc, Scope* sc)
                          * picked up and added to the symtab.
                          */
                         sd.semanticRun = PASS.semantic;
-                        sd.dsymbolSemantic(sc);
+                        sd.dsymbolSemantic(sc2);
                     }
                 }
                 else
@@ -2271,10 +2191,7 @@ RootObject compileTypeMixin(TypeMixin tm, Loc loc, Scope* sc)
         return null;
     }
 
-    Type t = o.isType();
-    Expression e = t ? t.typeToExpression() : o.isExpression();
-
-    return (!e && t) ? t : e;
+    return o;
 }
 
 
@@ -2296,7 +2213,8 @@ extern (C++) Type merge(Type type)
         case Tident:
         case Tinstance:
         case Tmixin:
-            return type;
+        case Ttag:
+            return type;        // don't merge placeholder types
 
         case Tsarray:
             // prevents generating the mangle if the array dim is not yet known
@@ -2375,7 +2293,7 @@ Expression getProperty(Type t, Scope* scope_, const ref Loc loc, Identifier iden
         }
         if (ident == Id.__sizeof)
         {
-            d_uns64 sz = mt.size(loc);
+            const sz = mt.size(loc);
             if (sz == SIZE_INVALID)
                 return ErrorExp.get();
             e = new IntegerExp(loc, sz, Type.tsize_t);
@@ -2985,43 +2903,20 @@ void resolve(Type mt, const ref Loc loc, Scope* sc, out Expression pe, out Type 
     void visitIdentifier(TypeIdentifier mt)
     {
         //printf("TypeIdentifier::resolve(sc = %p, idents = '%s')\n", sc, mt.toChars());
-        if ((mt.ident.equals(Id._super) || mt.ident.equals(Id.This)) && !hasThis(sc))
-        {
-            // @@@DEPRECATED_v2.091@@@.
-            // Made an error in 2.086.
-            // Eligible for removal in 2.091.
-            if (mt.ident.equals(Id._super))
-            {
-                error(mt.loc, "Using `super` as a type is obsolete. Use `typeof(super)` instead");
-            }
-             // @@@DEPRECATED_v2.091@@@.
-            // Made an error in 2.086.
-            // Eligible for removal in 2.091.
-            if (mt.ident.equals(Id.This))
-            {
-                error(mt.loc, "Using `this` as a type is obsolete. Use `typeof(this)` instead");
-            }
-            if (AggregateDeclaration ad = sc.getStructClassScope())
-            {
-                if (ClassDeclaration cd = ad.isClassDeclaration())
-                {
-                    if (mt.ident.equals(Id.This))
-                        mt.ident = cd.ident;
-                    else if (cd.baseClass && mt.ident.equals(Id._super))
-                        mt.ident = cd.baseClass.ident;
-                }
-                else
-                {
-                    StructDeclaration sd = ad.isStructDeclaration();
-                    if (sd && mt.ident.equals(Id.This))
-                        mt.ident = sd.ident;
-                }
-            }
-        }
         if (mt.ident == Id.ctfe)
         {
             error(loc, "variable `__ctfe` cannot be read at compile time");
             return returnError();
+        }
+        if (mt.ident == Id.builtin_va_list) // gcc has __builtin_va_xxxx for stdarg.h
+        {
+            /* Since we don't support __builtin_va_start, -arg, -end, we don't
+             * have to actually care what -list is. A void* will do.
+             * If we ever do care, import core.stdc.stdarg and pull
+             * the definition out of that, similarly to how std.math is handled for PowExp
+             */
+            pt = target.va_listType(loc, sc);
+            return;
         }
 
         Dsymbol scopesym;
@@ -3096,7 +2991,7 @@ void resolve(Type mt, const ref Loc loc, Scope* sc, out Expression pe, out Type 
         //static int nest; if (++nest == 50) *(char*)0=0;
         if (sc is null)
         {
-            error(loc, "Invalid scope.");
+            error(loc, "invalid scope");
             return returnError();
         }
         if (mt.inuse)
@@ -3144,7 +3039,8 @@ void resolve(Type mt, const ref Loc loc, Scope* sc, out Expression pe, out Type 
         if (mt.exp.op == EXP.type ||
             mt.exp.op == EXP.scope_)
         {
-            if (mt.exp.checkType())
+            if (!(sc.flags & SCOPE.Cfile) && // in (extended) C typeof may be used on types as with sizeof
+                mt.exp.checkType())
                 goto Lerr;
 
             /* Today, 'typeof(func)' returns void if func is a
@@ -3338,14 +3234,99 @@ void resolve(Type mt, const ref Loc loc, Scope* sc, out Expression pe, out Type 
         mt.obj = pe ? pe : (pt ? pt : ps);
     }
 
-    void visitTraits(TypeTraits tt)
+    void visitTraits(TypeTraits mt)
     {
-        if (Type t = typeSemantic(tt, loc, sc))
-            returnType(t);
-        else if (tt.sym)
-            returnSymbol(tt.sym);
+        // if already resolved just return the cached object.
+        if (mt.obj)
+        {
+            pt = mt.obj.isType();
+            ps = mt.obj.isDsymbol();
+            return;
+        }
+
+        import dmd.traits : semanticTraits;
+
+        if (Expression e = semanticTraits(mt.exp, sc))
+        {
+            switch (e.op)
+            {
+            case EXP.dotVariable:
+                mt.obj = e.isDotVarExp().var;
+                break;
+            case EXP.variable:
+                mt.obj = e.isVarExp().var;
+                break;
+            case EXP.function_:
+                auto fe = e.isFuncExp();
+                mt.obj = fe.td ? fe.td : fe.fd;
+                break;
+            case EXP.dotTemplateDeclaration:
+                mt.obj = e.isDotTemplateExp().td;
+                break;
+            case EXP.dSymbol:
+                mt.obj = e.isDsymbolExp().s;
+                break;
+            case EXP.template_:
+                mt.obj = e.isTemplateExp().td;
+                break;
+            case EXP.scope_:
+                mt.obj = e.isScopeExp().sds;
+                break;
+            case EXP.tuple:
+                TupleExp te = e.isTupleExp();
+                Objects* elems = new Objects(te.exps.dim);
+                foreach (i; 0 .. elems.dim)
+                {
+                    auto src = (*te.exps)[i];
+                    switch (src.op)
+                    {
+                    case EXP.type:
+                        (*elems)[i] = src.isTypeExp().type;
+                        break;
+                    case EXP.dotType:
+                        (*elems)[i] = src.isDotTypeExp().sym.isType();
+                        break;
+                    case EXP.overloadSet:
+                        (*elems)[i] = src.isOverExp().type;
+                        break;
+                    default:
+                        if (auto sym = isDsymbol(src))
+                            (*elems)[i] = sym;
+                        else
+                            (*elems)[i] = src;
+                    }
+                }
+                TupleDeclaration td = new TupleDeclaration(e.loc, Identifier.generateId("__aliastup"), elems);
+                mt.obj = td;
+                break;
+            case EXP.dotType:
+                mt.obj = e.isDotTypeExp().sym.isType();
+                break;
+            case EXP.type:
+                mt.obj = e.isTypeExp().type;
+                break;
+            case EXP.overloadSet:
+                mt.obj = e.isOverExp().type;
+                break;
+            default:
+                break;
+            }
+        }
+
+        if (mt.obj)
+        {
+            if (auto t = mt.obj.isType())
+                returnType(t.addMod(mt.mod));
+            else if (auto s = mt.obj.isDsymbol())
+                returnSymbol(s);
+            else
+                assert(0);
+        }
         else
+        {
+            mt.obj = Type.terror;
             return returnError();
+        }
     }
 
     switch (mt.ty)
@@ -3403,7 +3384,7 @@ Expression dotExp(Type mt, Scope* sc, Expression e, Identifier ident, int flag)
                 v.dsymbolSemantic(null);
                 if (v.isField())
                 {
-                    auto ad = v.toParent().isAggregateDeclaration();
+                    auto ad = v.isMember();
                     objc.checkOffsetof(e, ad);
                     ad.size(e.loc);
                     if (ad.sizeok != Sizeok.done)
@@ -3632,11 +3613,34 @@ Expression dotExp(Type mt, Scope* sc, Expression e, Identifier ident, int flag)
                 e.error("`%s` is not an expression", e.toChars());
                 return ErrorExp.get();
             }
-            else if (checkUnsafeDotExp(sc, e, ident, flag))
+            else if (mt.dim.toUInteger() < 1 && checkUnsafeDotExp(sc, e, ident, flag))
             {
+                // .ptr on static array is @safe unless size is 0
+                // https://issues.dlang.org/show_bug.cgi?id=20853
                 return ErrorExp.get();
             }
             e = e.castTo(sc, e.type.nextOf().pointerTo());
+        }
+        else if (ident == Id._tupleof)
+        {
+            if (e.isTypeExp())
+            {
+                e.error("`.tupleof` cannot be used on type `%s`", mt.toChars);
+                return ErrorExp.get();
+            }
+            else
+            {
+                Expression e0;
+                Expression ev = e;
+                ev = extractSideEffect(sc, "__tup", e0, ev);
+
+                const length = cast(size_t)mt.dim.toUInteger();
+                auto exps = new Expressions();
+                exps.reserve(length);
+                foreach (i; 0 .. length)
+                    exps.push(new IndexExp(e.loc, ev, new IntegerExp(e.loc, i, Type.tsize_t)));
+                e = new TupleExp(e.loc, e0, exps);
+            }
         }
         else
         {
@@ -3821,10 +3825,10 @@ Expression dotExp(Type mt, Scope* sc, Expression e, Identifier ident, int flag)
                  *  e.opDot().ident
                  */
                 e = build_overload(e.loc, sc, e, null, fd);
-                // @@@DEPRECATED_2.087@@@.
-                e.deprecation("`opDot` is deprecated. Use `alias this`");
-                e = new DotIdExp(e.loc, e, ident);
-                return returnExp(e.expressionSemantic(sc));
+                // @@@DEPRECATED_2.110@@@.
+                // Deprecated in 2.082, made an error in 2.100.
+                e.error("`opDot` is obsolete. Use `alias this`");
+                return ErrorExp.get();
             }
 
             /* Look for overloaded opDispatch to see if we should forward request
@@ -3898,7 +3902,7 @@ Expression dotExp(Type mt, Scope* sc, Expression e, Identifier ident, int flag)
         assert(e.op != EXP.dot);
 
         // https://issues.dlang.org/show_bug.cgi?id=14010
-        if (ident == Id._mangleof)
+        if (!(sc.flags & SCOPE.Cfile) && ident == Id._mangleof)
         {
             return mt.getProperty(sc, e.loc, ident, flag & 1);
         }
@@ -3940,7 +3944,7 @@ Expression dotExp(Type mt, Scope* sc, Expression e, Identifier ident, int flag)
 
             e = new TupleExp(e.loc, e0, exps);
             Scope* sc2 = sc.push();
-            sc2.flags |= global.params.useDIP1000 == FeatureState.enabled ? SCOPE.onlysafeaccess : SCOPE.noaccesscheck;
+            sc2.flags |= SCOPE.noaccesscheck;
             e = e.expressionSemantic(sc2);
             sc2.pop();
             return e;
@@ -4084,7 +4088,7 @@ Expression dotExp(Type mt, Scope* sc, Expression e, Identifier ident, int flag)
                     return e.expressionSemantic(sc);
                 }
             }
-            if (d.semanticRun == PASS.init)
+            if (d.semanticRun == PASS.initial)
                 d.dsymbolSemantic(null);
             checkAccess(e.loc, sc, e, d);
             auto ve = new VarExp(e.loc, d);
@@ -4201,7 +4205,7 @@ Expression dotExp(Type mt, Scope* sc, Expression e, Identifier ident, int flag)
 
             e = new TupleExp(e.loc, e0, exps);
             Scope* sc2 = sc.push();
-            sc2.flags |= global.params.useDIP1000 == FeatureState.enabled ? SCOPE.onlysafeaccess : SCOPE.noaccesscheck;
+            sc2.flags |= SCOPE.noaccesscheck;
             e = e.expressionSemantic(sc2);
             sc2.pop();
             return e;
@@ -4315,7 +4319,7 @@ Expression dotExp(Type mt, Scope* sc, Expression e, Identifier ident, int flag)
 
             if (ident == Id.outer && mt.sym.vthis)
             {
-                if (mt.sym.vthis.semanticRun == PASS.init)
+                if (mt.sym.vthis.semanticRun == PASS.initial)
                     mt.sym.vthis.dsymbolSemantic(null);
 
                 if (auto cdp = mt.sym.toParentLocal().isClassDeclaration())
@@ -4511,7 +4515,7 @@ Expression dotExp(Type mt, Scope* sc, Expression e, Identifier ident, int flag)
                     Expression e1;
                     Type t;
                     /* returns: true to continue, false to return */
-                    if (f.isThis2)
+                    if (f.hasDualContext())
                     {
                         if (f.followInstantiationContext(ad))
                         {
@@ -4568,7 +4572,7 @@ Expression dotExp(Type mt, Scope* sc, Expression e, Identifier ident, int flag)
                 }
             }
             //printf("e = %s, d = %s\n", e.toChars(), d.toChars());
-            if (d.semanticRun == PASS.init)
+            if (d.semanticRun == PASS.initial)
                 d.dsymbolSemantic(null);
 
             // If static function, get the most visible overload.
@@ -4650,7 +4654,7 @@ extern (C++) Expression defaultInit(Type mt, const ref Loc loc, const bool isCfi
     {
         static if (LOGDEFAULTINIT)
         {
-            printf("TypeBasic::defaultInit() '%s'\n", mt.toChars());
+            printf("TypeBasic::defaultInit() '%s' isCfile: %d\n", mt.toChars(), isCfile);
         }
         dinteger_t value = 0;
 
@@ -4708,7 +4712,7 @@ extern (C++) Expression defaultInit(Type mt, const ref Loc loc, const bool isCfi
     {
         static if (LOGDEFAULTINIT)
         {
-            printf("TypeSArray::defaultInit() '%s'\n", mt.toChars());
+            printf("TypeSArray::defaultInit() '%s' isCfile %d\n", mt.toChars(), isCfile);
         }
         if (mt.next.ty == Tvoid)
             return mt.tuns8.defaultInit(loc, isCfile);

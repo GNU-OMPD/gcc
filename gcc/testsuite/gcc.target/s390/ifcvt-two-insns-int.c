@@ -3,9 +3,8 @@
 /* { dg-do run } */
 /* { dg-options "-O2 -march=z13 --save-temps" } */
 
-/* { dg-final { scan-assembler "lochinle\t%r.?,1" } } */
-/* { dg-final { scan-assembler "locrnle\t.*" } } */
-#include <stdbool.h>
+/* { dg-final { scan-assembler "lochih\t%r.?,1" } } */
+/* { dg-final { scan-assembler "locrh\t.*" } } */
 #include <limits.h>
 #include <stdio.h>
 #include <assert.h>
@@ -33,7 +32,7 @@ int main()
 {
   int a[] = {2, 1, -13, INT_MAX, INT_MIN, 0};
 
-  int res = foo (a, sizeof (a));
+  int res = foo (a, sizeof (a) / sizeof (a[0]));
 
   assert (res == (INT_MIN + 1));
 }

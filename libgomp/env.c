@@ -90,7 +90,7 @@ void **gomp_places_list;
 unsigned long gomp_places_list_len;
 uintptr_t gomp_def_allocator = omp_default_mem_alloc;
 int gomp_debug_var;
-bool gompd_enabled;
+int gompd_enabled;
 unsigned int gomp_num_teams_var;
 int gomp_nteams_var;
 int gomp_teams_thread_limit_var;
@@ -420,13 +420,13 @@ parse_target_offload (const char *name, enum gomp_target_offload_t *offload)
   gomp_error ("Invalid value for environment variable OMP_TARGET_OFFLOAD");
 }
 
-/* Parse OMPD_DEBUG environment variable.  */
+/* Parse OMP_DEBUG environment variable.  */
 
 static void
-parse_debug (const char *name, bool *debug_value)
+parse_debug (const char *name, int *debug_value)
 {
   const char *env;
-  bool ret = false;
+  int ret = -1;
   env = getenv (name);
   if (env == NULL)
     return;
@@ -435,11 +435,16 @@ parse_debug (const char *name, bool *debug_value)
   if (strncasecmp (env, "enabled", 7) == 0)
     {
       env += 7;
-      ret = true;
+      ret = 1;
+    }
+  else if (strncasecmp (env, "disabled", 8) == 0)
+    {
+      env += 8;
+      ret = 0;
     }
   while (isspace ((unsigned char) *env))
     ++env;
-  if (ret && *env == '\0')
+  if (ret != -1 && *env == '\0')
     {
       *debug_value = ret;
       return;
@@ -1513,7 +1518,7 @@ initialize_env (void)
     }
   parse_int_secure ("GOMP_DEBUG", &gomp_debug_var, true);
   parse_debug ("OMP_DEBUG", &gompd_enabled);
-  if (gompd_enabled)
+  if (gompd_enabled == 1)
     gompd_load ();
 #ifndef HAVE_SYNC_BUILTINS
   gomp_mutex_init (&gomp_managed_threads_lock);

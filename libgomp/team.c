@@ -338,6 +338,7 @@ gomp_team_start (void (*fn) (void *), void *data, unsigned nthreads,
   struct gomp_thread **affinity_thr = NULL;
   bool force_display = false;
 
+  ompd_bp_parallel_begin ();
   thr = gomp_thread ();
   nested = thr->ts.level;
   pool = thr->thread_pool;

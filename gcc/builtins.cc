@@ -67,13 +67,13 @@ along with GCC; see the file COPYING3.  If not see
 #include "asan.h"
 #include "internal-fn.h"
 #include "case-cfn-macros.h"
+#include "gimple-iterator.h"
 #include "gimple-fold.h"
 #include "intl.h"
 #include "file-prefix-map.h" /* remap_macro_filename()  */
 #include "gomp-constants.h"
 #include "omp-general.h"
 #include "tree-dfa.h"
-#include "gimple-iterator.h"
 #include "gimple-ssa.h"
 #include "tree-ssa-live.h"
 #include "tree-outof-ssa.h"
@@ -233,7 +233,7 @@ called_as_built_in (tree node)
    If ADDR_P is true we are taking the address of the memory reference EXP
    and thus cannot rely on the access taking place.  */
 
-static bool
+bool
 get_object_alignment_2 (tree exp, unsigned int *alignp,
 			unsigned HOST_WIDE_INT *bitposp, bool addr_p)
 {
@@ -613,7 +613,7 @@ c_strlen (tree arg, int only_value, c_strlen_data *data, unsigned eltsize)
   if (eltsize != tree_to_uhwi (TYPE_SIZE_UNIT (TREE_TYPE (TREE_TYPE (src)))))
     return NULL_TREE;
 
-  /* Set MAXELTS to sizeof (SRC) / sizeof (*SRC) - 1, the maximum possible
+  /* Set MAXELTS to ARRAY_SIZE (SRC) - 1, the maximum possible
      length of SRC.  Prefer TYPE_SIZE() to TREE_STRING_LENGTH() if possible
      in case the latter is less than the size of the array, such as when
      SRC refers to a short string literal used to initialize a large array.
@@ -2967,16 +2967,28 @@ expand_builtin_int_roundingfn_2 (tree exp, rtx target)
 	 BUILT_IN_IROUND and if __builtin_iround is called directly, emit
 	 a call to lround in the hope that the target provides at least some
 	 C99 functions.  This should result in the best user experience for
-	 not full C99 targets.  */
-      tree fallback_fndecl = mathfn_built_in_1
-	(TREE_TYPE (arg), as_combined_fn (fallback_fn), 0);
+	 not full C99 targets.
+	 As scalar float conversions with same mode are useless in GIMPLE,
+	 we can end up e.g. with _Float32 argument passed to float builtin,
+	 try to get the type from the builtin prototype first.  */
+      tree fallback_fndecl = NULL_TREE;
+      if (tree argtypes = TYPE_ARG_TYPES (TREE_TYPE (fndecl)))
+        fallback_fndecl
+          = mathfn_built_in_1 (TREE_VALUE (argtypes),
+			       as_combined_fn (fallback_fn), 0);
+      if (fallback_fndecl == NULL_TREE)
+	fallback_fndecl
+	  = mathfn_built_in_1 (TREE_TYPE (arg),
+			       as_combined_fn (fallback_fn), 0);
+      if (fallback_fndecl)
+	{
+	  exp = build_call_nofold_loc (EXPR_LOCATION (exp),
+				       fallback_fndecl, 1, arg);
 
-      exp = build_call_nofold_loc (EXPR_LOCATION (exp),
-				   fallback_fndecl, 1, arg);
-
-      target = expand_call (exp, NULL_RTX, target == const0_rtx);
-      target = maybe_emit_group_store (target, TREE_TYPE (exp));
-      return convert_to_mode (mode, target, 0);
+	  target = expand_call (exp, NULL_RTX, target == const0_rtx);
+	  target = maybe_emit_group_store (target, TREE_TYPE (exp));
+	  return convert_to_mode (mode, target, 0);
+	}
     }
 
   return expand_call (exp, target, target == const0_rtx);

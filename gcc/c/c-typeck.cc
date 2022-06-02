@@ -1055,7 +1055,7 @@ comptypes (tree type1, tree type2)
 /* Like comptypes, but if it returns non-zero because enum and int are
    compatible, it sets *ENUM_AND_INT_P to true.  */
 
-static int
+int
 comptypes_check_enum_int (tree type1, tree type2, bool *enum_and_int_p)
 {
   const struct tagged_tu_seen_cache * tagged_tu_seen_base1 = tagged_tu_seen_base;
@@ -1693,7 +1693,7 @@ function_types_compatible_p (const_tree f1, const_tree f2,
 
   if (args1 == NULL_TREE)
     {
-      if (flag_isoc2x ? stdarg_p (f2) : !self_promoting_args_p (args2))
+      if (!self_promoting_args_p (args2))
 	return 0;
       /* If one of these types comes from a non-prototype fn definition,
 	 compare that with the other type's arglist.
@@ -1706,7 +1706,7 @@ function_types_compatible_p (const_tree f1, const_tree f2,
     }
   if (args2 == NULL_TREE)
     {
-      if (flag_isoc2x ? stdarg_p (f1) : !self_promoting_args_p (args1))
+      if (!self_promoting_args_p (args1))
 	return 0;
       if (TYPE_ACTUAL_ARG_TYPES (f2)
 	  && type_lists_compatible_p (args1, TYPE_ACTUAL_ARG_TYPES (f2),
@@ -4919,6 +4919,10 @@ build_unary_op (location_t location, enum tree_code code, tree xarg,
       val = build1 (ADDR_EXPR, argtype, arg);
 
       ret = val;
+      goto return_build_unary_op;
+
+    case PAREN_EXPR:
+      ret = build1 (code, TREE_TYPE (arg), arg);
       goto return_build_unary_op;
 
     default:
@@ -8434,6 +8438,7 @@ struct initializer_stack
   char top_level;
   char require_constant_value;
   char require_constant_elements;
+  char designated;
   rich_location *missing_brace_richloc;
 };
 
@@ -8460,6 +8465,7 @@ start_init (tree decl, tree asmspec_tree ATTRIBUTE_UNUSED, int top_level,
   p->top_level = constructor_top_level;
   p->next = initializer_stack;
   p->missing_brace_richloc = richloc;
+  p->designated = constructor_designated;
   initializer_stack = p;
 
   constructor_decl = decl;
@@ -8518,6 +8524,7 @@ finish_init (void)
   require_constant_value = p->require_constant_value;
   require_constant_elements = p->require_constant_elements;
   constructor_stack = p->constructor_stack;
+  constructor_designated = p->designated;
   constructor_range_stack = p->constructor_range_stack;
   constructor_elements = p->elements;
   spelling = p->spelling;
@@ -8727,7 +8734,9 @@ push_init_level (location_t loc, int implicit,
   constructor_depth = SPELLING_DEPTH ();
   constructor_elements = NULL;
   constructor_incremental = 1;
-  constructor_designated = 0;
+  /* If the upper initializer is designated, then mark this as
+     designated too to prevent bogus warnings.  */
+  constructor_designated = p->designated;
   constructor_pending_elts = 0;
   if (!implicit)
     {
@@ -8752,9 +8761,6 @@ push_init_level (location_t loc, int implicit,
 	  push_member_name (constructor_fields);
 	  constructor_depth++;
 	}
-      /* If upper initializer is designated, then mark this as
-	 designated too to prevent bogus warnings.  */
-      constructor_designated = p->designated;
     }
   else if (TREE_CODE (constructor_type) == ARRAY_TYPE)
     {
@@ -12209,7 +12215,8 @@ build_binary_op (location_t location, enum tree_code code,
 	{
 	  doing_shift = true;
 	  if (TREE_CODE (op0) == INTEGER_CST
-	      && tree_int_cst_sgn (op0) < 0)
+	      && tree_int_cst_sgn (op0) < 0
+	      && !TYPE_OVERFLOW_WRAPS (type0))
 	    {
 	      /* Don't reject a left shift of a negative value in a context
 		 where a constant expression is needed in C90.  */
@@ -13368,7 +13375,7 @@ handle_omp_array_sections_1 (tree c, tree t, vec<tree> &types,
 	{
 	  error_at (OMP_CLAUSE_LOCATION (c),
 		    "expected single pointer in %qs clause",
-		    c_omp_map_clause_name (c, ort == C_ORT_ACC));
+		    user_omp_clause_code_name (c, ort == C_ORT_ACC));
 	  return error_mark_node;
 	}
     }
@@ -13800,6 +13807,8 @@ handle_omp_array_sections (tree c, enum c_omp_region_type ort)
 	}
       first = c_fully_fold (first, false, NULL);
       OMP_CLAUSE_DECL (c) = first;
+      if (OMP_CLAUSE_CODE (c) == OMP_CLAUSE_HAS_DEVICE_ADDR)
+	return false;
       if (size)
 	size = c_fully_fold (size, false, NULL);
       OMP_CLAUSE_SIZE (c) = size;
@@ -14089,7 +14098,7 @@ c_oacc_check_attachments (tree c)
       if (TREE_CODE (TREE_TYPE (t)) != POINTER_TYPE)
 	{
 	  error_at (OMP_CLAUSE_LOCATION (c), "expected pointer in %qs clause",
-		    c_omp_map_clause_name (c, true));
+		    user_omp_clause_code_name (c, true));
 	  return true;
 	}
     }
@@ -14105,7 +14114,7 @@ c_finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
 {
   bitmap_head generic_head, firstprivate_head, lastprivate_head;
   bitmap_head aligned_head, map_head, map_field_head, map_firstprivate_head;
-  bitmap_head oacc_reduction_head;
+  bitmap_head oacc_reduction_head, is_on_device_head;
   tree c, t, type, *pc;
   tree simdlen = NULL_TREE, safelen = NULL_TREE;
   bool branch_seen = false;
@@ -14141,6 +14150,7 @@ c_finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
   /* If ort == C_ORT_OMP used as nontemporal_head or use_device_xxx_head
      instead and for ort == C_ORT_OMP_TARGET used as in_reduction_head.  */
   bitmap_initialize (&oacc_reduction_head, &bitmap_default_obstack);
+  bitmap_initialize (&is_on_device_head, &bitmap_default_obstack);
 
   if (ort & C_ORT_ACC)
     for (c = clauses; c; c = OMP_CLAUSE_CHAIN (c))
@@ -14569,7 +14579,9 @@ c_finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
 			"%qE appears more than once in data clauses", t);
 	      remove = true;
 	    }
-	  else if (OMP_CLAUSE_CODE (c) == OMP_CLAUSE_PRIVATE
+	  else if ((OMP_CLAUSE_CODE (c) == OMP_CLAUSE_PRIVATE
+		    || OMP_CLAUSE_CODE (c) == OMP_CLAUSE_HAS_DEVICE_ADDR
+		    || OMP_CLAUSE_CODE (c) == OMP_CLAUSE_IS_DEVICE_PTR)
 		   && bitmap_bit_p (&map_head, DECL_UID (t)))
 	    {
 	      if (ort == C_ORT_ACC)
@@ -14820,6 +14832,18 @@ c_finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
 	    }
 	  if (t == error_mark_node)
 	    remove = true;
+	  else if (OMP_CLAUSE_CODE (c) == OMP_CLAUSE_DEPEND
+		   && t == ridpointers[RID_OMP_ALL_MEMORY])
+	    {
+	      if (OMP_CLAUSE_DEPEND_KIND (c) != OMP_CLAUSE_DEPEND_OUT
+		  && OMP_CLAUSE_DEPEND_KIND (c) != OMP_CLAUSE_DEPEND_INOUT)
+		{
+		  error_at (OMP_CLAUSE_LOCATION (c),
+			    "%<omp_all_memory%> used with %<depend%> kind "
+			    "other than %<out%> or %<inout%>");
+		  remove = true;
+		}
+	    }
 	  else if (!lvalue_p (t))
 	    {
 	      error_at (OMP_CLAUSE_LOCATION (c),
@@ -14861,24 +14885,32 @@ c_finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
 	    }
 	  if (!remove)
 	    {
-	      tree addr = build_unary_op (OMP_CLAUSE_LOCATION (c), ADDR_EXPR,
-					  t, false);
-	      if (addr == error_mark_node)
-		remove = true;
+	      if (t == ridpointers[RID_OMP_ALL_MEMORY])
+		t = null_pointer_node;
 	      else
 		{
+		  tree addr = build_unary_op (OMP_CLAUSE_LOCATION (c),
+					      ADDR_EXPR, t, false);
+		  if (addr == error_mark_node)
+		    {
+		      remove = true;
+		      break;
+		    }
 		  t = build_indirect_ref (OMP_CLAUSE_LOCATION (c), addr,
 					  RO_UNARY_STAR);
 		  if (t == error_mark_node)
-		    remove = true;
-		  else if (TREE_CODE (OMP_CLAUSE_DECL (c)) == TREE_LIST
-			   && TREE_PURPOSE (OMP_CLAUSE_DECL (c))
-			   && (TREE_CODE (TREE_PURPOSE (OMP_CLAUSE_DECL (c)))
-			       == TREE_VEC))
-		    TREE_VALUE (OMP_CLAUSE_DECL (c)) = t;
-		  else
-		    OMP_CLAUSE_DECL (c) = t;
+		    {
+		      remove = true;
+		      break;
+		    }
 		}
+	      if (TREE_CODE (OMP_CLAUSE_DECL (c)) == TREE_LIST
+		  && TREE_PURPOSE (OMP_CLAUSE_DECL (c))
+		  && (TREE_CODE (TREE_PURPOSE (OMP_CLAUSE_DECL (c)))
+		      == TREE_VEC))
+		TREE_VALUE (OMP_CLAUSE_DECL (c)) = t;
+	      else
+		OMP_CLAUSE_DECL (c) = t;
 	    }
 	  break;
 
@@ -15183,7 +15215,8 @@ c_finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
 			"%qD appears more than once in data clauses", t);
 	      remove = true;
 	    }
-	  else if (bitmap_bit_p (&firstprivate_head, DECL_UID (t)))
+	  else if (bitmap_bit_p (&firstprivate_head, DECL_UID (t))
+		   || bitmap_bit_p (&is_on_device_head, DECL_UID (t)))
 	    {
 	      if (ort == C_ORT_ACC)
 		error_at (OMP_CLAUSE_LOCATION (c),
@@ -15268,6 +15301,8 @@ c_finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
 	case OMP_CLAUSE_IS_DEVICE_PTR:
 	case OMP_CLAUSE_USE_DEVICE_PTR:
 	  t = OMP_CLAUSE_DECL (c);
+	  if (OMP_CLAUSE_CODE (c) == OMP_CLAUSE_IS_DEVICE_PTR)
+	    bitmap_set_bit (&is_on_device_head, DECL_UID (t));
 	  if (TREE_CODE (TREE_TYPE (t)) != POINTER_TYPE)
 	    {
 	      if (OMP_CLAUSE_CODE (c) == OMP_CLAUSE_USE_DEVICE_PTR
@@ -15287,6 +15322,24 @@ c_finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
 		}
 	    }
 	  goto check_dup_generic;
+
+	case OMP_CLAUSE_HAS_DEVICE_ADDR:
+	  t = OMP_CLAUSE_DECL (c);
+	  if (TREE_CODE (t) == TREE_LIST)
+	    {
+	      if (handle_omp_array_sections (c, ort))
+		remove = true;
+	      else
+		{
+		  t = OMP_CLAUSE_DECL (c);
+		  while (TREE_CODE (t) == ARRAY_REF)
+		    t = TREE_OPERAND (t, 0);
+		}
+	    }
+	  bitmap_set_bit (&is_on_device_head, DECL_UID (t));
+	  if (VAR_P (t) || TREE_CODE (t) == PARM_DECL)
+	    c_mark_addressable (t);
+	  goto check_dup_generic_t;
 
 	case OMP_CLAUSE_USE_DEVICE_ADDR:
 	  t = OMP_CLAUSE_DECL (c);
@@ -15861,6 +15914,12 @@ c_build_va_arg (location_t loc1, tree expr, location_t loc2, tree type)
     {
       error_at (loc2, "second argument to %<va_arg%> is of incomplete "
 		"type %qT", type);
+      return error_mark_node;
+    }
+  else if (TREE_CODE (type) == FUNCTION_TYPE)
+    {
+      error_at (loc2, "second argument to %<va_arg%> is a function type %qT",
+		type);
       return error_mark_node;
     }
   else if (warn_cxx_compat && TREE_CODE (type) == ENUMERAL_TYPE)
