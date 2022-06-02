@@ -30,9 +30,10 @@ extern "C" {
 
 #include "omp-tools.h"
 #include "ompd-types.h"
-#include "config.h"
+#include "config.h.in"
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
 #include <stdbool.h>
@@ -72,7 +73,7 @@ typedef struct _ompd_task_handle
 } ompd_task_handle_t;
 
 /* a struct that define the address space and offest of value want ti get  */
-typedef struct opmd_field_of_struct 
+typedef struct _ompd_field_of_struct
 {
     ompd_address_space_context_t *context ;
     ompd_thread_context_t *tcontext ; 
@@ -86,7 +87,7 @@ typedef struct opmd_field_of_struct
     char* field_name ; 
    
 
-} opmd_field_of_struct_t ; 
+} ompd_field_of_struct_t ; 
 
 
 #define CHECK_RET(ret) \
@@ -131,6 +132,7 @@ typedef struct opmd_field_of_struct
 	    ompd_scope_address_space) \
   ompd_icv (stacksize_var, "stack size var", ompd_scope_address_space) \
   ompd_icv (debug_var, "debug var", ompd_scope_address_space) \
+  ompd_icv (ompd_state, "OMP_DEBUG", ompd_scope_address_space) \
   ompd_icv (display_affinity_var, "display affinity var", \
 	    ompd_scope_address_space) \
   ompd_icv (affinity_format_var, "affinity format var", \
@@ -152,6 +154,7 @@ typedef struct opmd_field_of_struct
   ompd_icv (implicit_task_var, "implicit task var", ompd_scope_task) \
   ompd_icv (team_size_var, "team size var", ompd_scope_parallel)
 
+
 enum ompd_icv
 {
   gompd_icv_undefined_var = 0,
@@ -165,7 +168,7 @@ enum ompd_icv
 #pragma GCC visibility push(hidden)
 #endif
 
-ompd_rc_t get_sizes (ompd_address_space_context_t *);
+ompd_rc_t gompd_get_sizes (ompd_address_space_context_t *);
 
 /* Get Local internal control variables.  */
 ompd_rc_t gompd_get_nthread (ompd_thread_handle_t *, ompd_word_t *);
@@ -203,7 +206,24 @@ ompd_rc_t gompd_get_throttled_spin_count (ompd_address_space_handle_t *,
 					  ompd_word_t *);
 ompd_rc_t gompd_get_managed_threads (ompd_address_space_handle_t *,
 				     ompd_word_t *);
+ompd_rc_t gompd_stringize_gompd_enabled (ompd_address_space_handle_t *,
+                                         const char **);
 /*End of Global ICVs.  */
+
+
+/* helper function */
+void gompd_init_target_struct (ompd_address_space_context_t *,
+            ompd_thread_context_t *, ompd_address_t *,
+            ompd_field_of_struct_t  *);
+ompd_rc_t gompd_get_field_offest (ompd_field_of_struct_t *) ;
+ompd_rc_t gompd_get_field_size (ompd_field_of_struct_t *) ;
+ompd_rc_t gompd_adresses ( ompd_field_of_struct_t *f, const char *type,
+            const char *field) ; 
+char* gompd_string_contact (const char* str1, const char* str2, 
+            const char* str3, const char* str4 );
+ompd_rc_t gompd_read_value (ompd_field_of_struct_t *, ompd_size_t *, bool);
+ompd_rc_t gompd_dereference (ompd_field_of_struct_t * , const char *, 
+            const char *, ompd_size_t *) ;
 
 
 #ifdef HAVE_ATTRIBUTE_VISIBILITY

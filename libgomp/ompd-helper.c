@@ -21,7 +21,10 @@
 
 /* This file contains the source code of functions
    declared in ompd-helper.h.  */
+
 #include "ompd-helper.h"
+
+ompd_device_type_sizes_t target_sizes;
 
 /* Get global ICVs.  */
 ompd_rc_t
@@ -212,6 +215,7 @@ gompd_get_throttled_spin_count (ompd_address_space_handle_t *ah,
 	     target_sizes.sizeof_long_long, 1, ret, symbol_addr);
   *throt = temp;
   return ret;
+}
 
 ompd_rc_t
 gompd_get_managed_threads (ompd_address_space_handle_t *ah, ompd_word_t *man_th)
@@ -228,6 +232,19 @@ gompd_get_managed_threads (ompd_address_space_handle_t *ah, ompd_word_t *man_th)
 
 ompd_rc_t
 gompd_get_gompd_enabled (ompd_address_space_handle_t *ah, const char **string)
+{
+  CHECK (ah);
+  ompd_word_t temp = 0;
+  ompd_rc_t ret;
+  ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
+  GET_VALUE (ah->context, NULL, "gompd_enabled", temp, temp,
+             target_sizes.sizeof_int, 1, ret, symbol_addr);
+  static const char *temp_string = "disabled";
+  if (temp == 1)
+    temp_string = "enabled";
+  else if (temp == -1)
+    temp_string = "undefined";
+  *string = temp_string;
   return ret;
 }
 
@@ -258,7 +275,6 @@ gompd_get_sizes (ompd_address_space_context_t *context)
 
   inited = true;
   return ret;
-
 }
 
 /* helper functions to get field from struct */
@@ -267,56 +283,86 @@ void
 gompd_init_target_struct (ompd_address_space_context_t *context,
     ompd_thread_context_t *tcontext, 
     ompd_address_t *addr,
-    struct opmd_field_of_struct_t  *f)
+    ompd_field_of_struct_t  *f)
 {
-  f.context = context ;
-  f.tcontext = tcontext ;
-  f.addr = *addr ; 
+  f->context = context ;
+  f->tcontext = tcontext ;
+  f->addr = *addr ; 
 }
 
 
 
 ompd_rc_t 
-gompd_get_field_offest (struct opmd_field_of_struct_t *f  )
+gompd_get_field_offest ( ompd_field_of_struct_t *f  )
 {
   char *symbol_name = gompd_string_contact ("gompd_access_", 
     f->struct_name  ,"_" , f->field_name) ; 
   ompd_rc_t ret ; 
-  ompd_address_t addr = {f.addr.segment,0};
+  ompd_address_t addr = {f->addr.segment,0};
   ompd_size_t temp_var ; 
 
-  GET_VALUE(f.context, f.tcontext, symbol_name, &f->offest,  &temp_var,
-    target_sizes.sizeof_long_long, 1, ret, &addr) ;
+  GET_VALUE(f->context, f->tcontext, symbol_name, f->offest,  temp_var,
+    target_sizes.sizeof_long_long, 1, ret, addr) ; 
 
   free(symbol_name) ; 
   return ompd_rc_ok ;
 }
 
 ompd_rc_t 
-gompd_get_field_size (struct opmd_field_of_struct_t *f  )
+gompd_get_field_size ( ompd_field_of_struct_t *f  )
 {
   char *symbol_name = gompd_string_contact ("gompd_sizeof_", 
     f->struct_name  ,"_" , f->field_name) ; 
   ompd_rc_t ret ; 
-  ompd_address_t adddr = {f.segment,0};
-  ompd_size_t temp_var ; 
-
-  GET_VALUE(f.context, f.tcontext, symbol_name, &f->size,  &temp_var,
-    target_sizes.sizeof_long_long, 1, ret, &adddr) ;
+  ompd_address_t adddr = {f->addr.segment,0};
+  ompd_size_t temp_var ;
   
+  GET_VALUE(f->context, f->tcontext, symbol_name, f->size,  temp_var,
+    target_sizes.sizeof_long_long, 1, ret, adddr) ;
+
   free(symbol_name) ; 
   return ompd_rc_ok ; 
 }
 
-void 
-gompd_adresses (struct opmd_field_of_struct_t *f,
-    const char *type, const char *field)
+ompd_rc_t 
+gompd_adresses ( ompd_field_of_struct_t *f,
+   const char *type, const char *field)
 {
-  f.struct_name = type ;
-  f.field_name = field ;   
+  ompd_rc_t ret = ompd_rc_ok; 
+  *(f->struct_name) = *type ;
+  *(f->field_name) = *field ;   
   gompd_get_field_offest(f) ;
+  CHECK_RET(ret) ;
   gompd_get_field_size(f) ;
-  f.addr.address = f.addr.address + f.offest ; 
+  CHECK_RET(ret); 
+  f->addr.address = f->addr.address + f->offest ; 
+  
+  return ompd_rc_ok ; 
+}
+
+ompd_rc_t 
+gompd_read_value (ompd_field_of_struct_t *f,  ompd_size_t *buff, bool is_ptr )
+{
+  ompd_rc_t ret ; 
+  ompd_size_t tmp ; 
+  ompd_size_t size = (is_ptr)? target_sizes.sizeof_pointer : f->size ;
+  ret = callbacks->read_memory(f->context, f->tcontext, &f->addr, size, &tmp);
+  CHECK_RET(ret) ; 
+  ret = callbacks->device_to_host(f->context, &tmp ,size, 1, buff);
+  CHECK_RET(ret) ; 
+  
+  return ompd_rc_ok ; 
+}
+
+ompd_rc_t 
+gompd_dereference (ompd_field_of_struct_t *f , const char *type, 
+        const char *field , ompd_size_t *output)
+{
+  ompd_rc_t ret ; 
+  ret = gompd_adresses(f , type , field) ; 
+  CHECK_RET(ret) ; 
+  ret = gompd_read_value(f, output ,true ) ; 
+  return ret ; 
 }
 
 /* a helper to function to contact some string*/

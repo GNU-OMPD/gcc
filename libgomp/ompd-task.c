@@ -37,12 +37,14 @@ ompd_get_curr_task_handle( ompd_thread_handle_t *thread_handle,
    
    ompd_rc_t ret = ompd_rc_ok ; 
 
-   struct opmd_field_of_struct_t *f ;
-   ret = gompd_init_target_struct (thread_handle->ah->context, 
-         thread_handle->thread_context, &(thread_handle->th), f) ; 
-   CHECK_RET(ret) ;
-   ret = gompd_adresses (f, "gomp_thread", "task");
+   ompd_field_of_struct_t *f  = malloc(sizeof(ompd_field_of_struct_t));
+   ompd_address_t addr ; 
+   gompd_init_target_struct (thread_handle->ah->context, 
+               thread_handle->thread_context, &(thread_handle->th), f) ; 
+   ret = gompd_dereference(f, "gomp_thread", "task" ,&(addr.address)) ;
    CHECK_RET(ret) ; 
+
+   free(f) ; 
 
    // allocate the handle 
    ret = callbacks->alloc_memory(sizeof(ompd_task_handle_t),
@@ -50,7 +52,7 @@ ompd_get_curr_task_handle( ompd_thread_handle_t *thread_handle,
    CHECK_RET(ret) ; 
 
    (*task_handle)->ah = thread_handle->ah ;
-   (*task_handle)->th = f->addr ;
+   (*task_handle)->th = addr ;
 
    return ret;
 
@@ -225,51 +227,40 @@ ompd_task_handle_compare(
 
 
 
-// ompd_rc_t
-// ompd_get_task_function ( ompd_task_handle_t * task_handle,
-// 			 ompd_address_t * entry_point)
-// {
-// 	if(!task_handle || !task_handle->ah || !entry_point)
-// 		return ompd_rc_bad_input ;
+ompd_rc_t
+ompd_get_task_function ( ompd_task_handle_t * task_handle,
+			 ompd_address_t * entry_point)
+{
+	if(!task_handle || !task_handle->ah )
+		return ompd_rc_bad_input ;
 
-// 	ompd_address_space_context_t *context = task_handle->ah->context ;
+   CHECK(task_handle->ah) ; 
 
-// 	if( !context )
-// 		return ompd_rc_bad_input ;
-// 	if(!ompd_state )
-// 		return ompd_rc_needs_state_tracking ;
-// 	if(!callbacks)
-// 		return ompd_rc_callback_error ;
+	// task.icv.target_data->tgt_start => will return the entry point of 
+	// task
+   ompd_rc_t ret = ompd_rc_ok ; 
 
+   ompd_field_of_struct_t *f = malloc(sizeof(ompd_field_of_struct_t));
+   ompd_addr_t addr ;
+   gompd_init_target_struct (task_handle->ah->context, NULL, 
+            &(task_handle->th), f) ; 
+   // ret = gompd_dereference(f, "gomp_task", "icv" ,&(f->addr.address)) ;
+   ret = gompd_adresses(f,"gomp_task" , "icv") ; 
+   CHECK_RET(ret) ; 
+   ret = gompd_dereference(f, "gomp_task_icv", "target_data", 
+               &(f->addr.address));
+   CHECK_RET(ret) ; 
+   ret = gompd_adresses(f,"target_mem_desc" , "target_mem_desc") ; 
+   CHECK_RET(ret) ; 
+   ret = gompd_read_value(f, &addr, false) ; 
+   CHECK_RET(ret) ; 
 
-// 	// task.icv.target_data->tgt_start => will return the entry point of 
-// 	// task
+   free(f) ; 
+   // allocate the handle 
+   ret = callbacks->alloc_memory(sizeof(ompd_address_t),
+			(void **)(entry_point));
+   CHECK_RET(ret) ; 
+   entry_point->address = addr ;    
 
-
-// 	// get the task type
-// 	ompd_addr_t task_address ;
-// 	ompd_word_t task_kind ;
-// 	ompd_rc_t ret ;
-// 	GET_VALUE(context, NULL, "kind", task_kind, task_address,
-// 		target_sizes.sizeof_long_long, 1, ret);
-
-// 	if (ret != ompd_rc_ok)
-// 		return ret ;
-
-// 	// explict task
-// 	  if(task_kind == 1)
-// 	{
-// 		GET_VALUE(context, NULL, "fn", entry_point->address , 
-// 			task_address, target_sizes.sizeof_long_long, 1, ret);
-
-// 		if (ret != ompd_rc_ok)
-// 			return ret ;
-// 	}
-// 	// implict task
-// 	  else
-// 	{
-
-// 	}
-
-// 	return ompd_rc_ok ;
-// }
+	return ompd_rc_ok ;
+}

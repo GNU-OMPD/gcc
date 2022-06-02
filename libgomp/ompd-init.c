@@ -83,10 +83,10 @@ ompd_process_initialize (ompd_address_space_context_t *context,
 {
   if (context == NULL || handle == NULL)
     return ompd_rc_bad_input;
-<<<<<<< HEAD
 
   ompd_rc_t ret = gompd_get_sizes (context);
   if (ret != ompd_rc_ok)
+    return ret;
 
   /* Naive way to read from memory.  */
   ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
@@ -96,16 +96,17 @@ ompd_process_initialize (ompd_address_space_context_t *context,
   ret = callbacks->alloc_memory (sizeof (ompd_address_space_handle_t),
 				 (void **) (handle));
 
->>>>>>> master
   if (ret != ompd_rc_ok)
     return ret;
 
+  if (handle == NULL)
     return ompd_rc_error;
 
   (*handle)->context = context;
   (*handle)->kind = OMPD_DEVICE_KIND_HOST;
   return ret;
 }
+
 
 /* OMPD will not support GPUs for now.  */
 

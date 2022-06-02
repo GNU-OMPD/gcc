@@ -1,4 +1,4 @@
-/* Copyright (C) 2022 Free Software Foundation, Inc.
+/* Copyright (C) The GNU Toolchain Authors.
    Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
    This file is part of the GNU Offloading and Multi Processing Library
    (libgomp).
@@ -26,40 +26,32 @@
 
 #ifdef __cplusplus
 extern "C" {
-
 #define __GOMPD_NOTHROW throw ()
 #else
 #define __GOMPD_NOTHROW __attribute__((__nothrow__))
-
 #endif
 
 extern const char **ompd_dll_locations;
 
-
-
 extern void ompd_dll_locations_valid (void) __GOMPD_NOTHROW;
 
-=======
-#ifdef __ELF__
-  __asm__ __volatile__ (".globl ompd_dll_locations_valid\n\t" \
-			"ompd_dll_locations_valid:")
-#else
+typedef __UINT64_TYPE__ ompd_size_t;
+typedef __UINT64_TYPE__ ompd_wait_id_t;
+
+typedef __UINT64_TYPE__ ompd_addr_t;
+typedef __INT64_TYPE__ ompd_word_t;
 typedef __UINT64_TYPE__ ompd_seg_t;
 
 typedef struct ompd_address_t
 {
-
   ompd_seg_t segment;
   ompd_addr_t address;
-
 } ompd_address_t;
 
 typedef struct ompd_frame_info_t
 {
-
   ompd_address_t frame_address;
   ompd_word_t frame_flag;
-
 } ompd_frame_info_t;
 
 typedef __UINT64_TYPE__ ompd_device_t;
@@ -78,9 +70,19 @@ typedef enum ompd_scope_t
   ompd_scope_parallel = 4,
   ompd_scope_implicit_task = 5,
   ompd_scope_task = 6
+} ompd_scope_t;
+
+typedef __UINT64_TYPE__ ompd_icv_id_t;
+
+typedef struct _ompd_aspace_cont ompd_address_space_context_t;
 typedef struct _ompd_thread_cont ompd_thread_context_t;
+
+typedef enum ompd_rc_t
 {
+  ompd_rc_ok = 0,
   ompd_rc_unavailable = 1,
+  ompd_rc_stale_handle = 2,
+  ompd_rc_bad_input = 3,
   ompd_rc_error = 4,
   ompd_rc_unsupported = 5,
   ompd_rc_needs_state_tracking = 6,
@@ -93,9 +95,8 @@ typedef struct _ompd_thread_cont ompd_thread_context_t;
 } ompd_rc_t;
 
 
+typedef struct ompd_device_type_sizes_t
 {
-=======
->>>>>>> master
   __UINT8_TYPE__ sizeof_char;
   __UINT8_TYPE__ sizeof_short;
   __UINT8_TYPE__ sizeof_int;
@@ -139,7 +140,6 @@ typedef ompd_rc_t (*ompd_callback_print_string_fn_t) (const char *, int);
 
 typedef struct ompd_callbacks_t
 {
-
   ompd_callback_memory_alloc_fn_t alloc_memory;
   ompd_callback_memory_free_fn_t free_memory;
   ompd_callback_print_string_fn_t print_string;
@@ -264,33 +264,6 @@ ompd_rc_t ompd_get_icv_string_from_scope (void *, ompd_scope_t, ompd_icv_id_t,
 
 ompd_rc_t ompd_get_tool_data (void *, ompd_scope_t, ompd_word_t *,
 			      ompd_address_t *) __GOMPD_NOTHROW;
-
-#ifdef __ELF__
-#define ompd_bp_parallel_begin() \
-  __asm__ __volatile__ (".globl ompd_bp_parallel_begin\n\t" \
-			"ompd_bp_parallel_begin:")
-#define ompd_bp_parallel_end() \
-  __asm__ __volatile__ (".globl ompd_bp_parallel_end\n\t" \
-			"ompd_bp_parallel_end:")
-#define ompd_bp_task_begin() \
-  __asm__ __volatile__ (".globl ompd_bp_task_begin\n\t" \
-			"ompd_bp_task_begin:")
-#define ompd_bp_task_end() \
-  __asm__ __volatile__ (".globl ompd_bp_task_end\n\t" \
-			"ompd_bp_task_end:")
-#define ompd_bp_thread_begin() \
-  __asm__ __volatile__ (".globl ompd_bp_thread_begin\n\t" \
-			"ompd_bp_thread_begin:")
-#define ompd_bp_thread_end() \
-  __asm__ __volatile__ (".globl ompd_bp_thread_end\n\t" \
-			"ompd_bp_thread_end:")
-#define ompd_bp_device_begin() \
-  __asm__ __volatile__ (".globl ompd_bp_device_begin\n\t" \
-			"ompd_bp_device_end:")
-#define ompd_bp_device_end() \
-  __asm__ __volatile__ (".globl ompd_bp_device_end\n\t" \
-			"ompd_bp_device_end:")
-#else
 
 extern void ompd_bp_parallel_begin (void) __GOMPD_NOTHROW;
 extern void ompd_bp_parallel_end (void) __GOMPD_NOTHROW;
