@@ -1,6 +1,4 @@
-
 /* Copyright (C) The GNU Toolchain Authors.
-
    Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
    This file is part of the GNU Offloading and Multi Processing Library
    (libgomp).
@@ -70,7 +68,7 @@ ompd_get_version_string (const char **string)
 }
 
 ompd_rc_t
-ompd_finalize ()
+ompd_finalize (void)
 {
   return ompd_rc_ok;
 }

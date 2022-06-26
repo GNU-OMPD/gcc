@@ -1,6 +1,10 @@
+<<<<<<< HEAD
 
 /* Copyright (C) The GNU Toolchain Authors.
 
+=======
+/* Copyright (C) The GNU Toolchain Authors.
+>>>>>>> 8aec6e90a10ff6a8c8a2e20bd76253f5252a6f20
    Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
    This file is part of the GNU Offloading and Multi Processing Library
    (libgomp).
@@ -75,47 +79,83 @@ gompd_load ()
 /* Dummy functions. they shoud not be optimized.  */
 
 void __attribute__ ((noipa))
+<<<<<<< HEAD
 ompd_dll_locations_valid ()
+=======
+ompd_dll_locations_valid (void)
+>>>>>>> 8aec6e90a10ff6a8c8a2e20bd76253f5252a6f20
 {
 }
 
 void __attribute__ ((noipa))
+<<<<<<< HEAD
 ompd_bp_parallel_begin ()
+=======
+ompd_bp_parallel_begin (void)
+>>>>>>> 8aec6e90a10ff6a8c8a2e20bd76253f5252a6f20
 {
 }
 
 void __attribute__ ((noipa))
+<<<<<<< HEAD
 ompd_bp_parallel_end ()
+=======
+ompd_bp_parallel_end (void)
+>>>>>>> 8aec6e90a10ff6a8c8a2e20bd76253f5252a6f20
 {
 }
 
 void __attribute__ ((noipa))
+<<<<<<< HEAD
 ompd_bp_task_begin ()
+=======
+ompd_bp_task_begin (void)
+>>>>>>> 8aec6e90a10ff6a8c8a2e20bd76253f5252a6f20
 {
 }
 
 void __attribute__ ((noipa))
+<<<<<<< HEAD
 ompd_bp_task_end ()
+=======
+ompd_bp_task_end (void)
+>>>>>>> 8aec6e90a10ff6a8c8a2e20bd76253f5252a6f20
 {
 }
 
 void __attribute__ ((noipa))
+<<<<<<< HEAD
 ompd_bp_thread_begin ()
+=======
+ompd_bp_thread_begin (void)
+>>>>>>> 8aec6e90a10ff6a8c8a2e20bd76253f5252a6f20
 {
 }
 
 void __attribute__ ((noipa))
+<<<<<<< HEAD
 ompd_bp_thread_end ()
+=======
+ompd_bp_thread_end (void)
+>>>>>>> 8aec6e90a10ff6a8c8a2e20bd76253f5252a6f20
 {
 }
 
 void __attribute__ ((noipa))
+<<<<<<< HEAD
 ompd_bp_device_begin ()
+=======
+ompd_bp_device_begin (void)
+>>>>>>> 8aec6e90a10ff6a8c8a2e20bd76253f5252a6f20
 {
 }
 
 void __attribute__ ((noipa))
+<<<<<<< HEAD
 ompd_bp_device_end ()
+=======
+ompd_bp_device_end (void)
+>>>>>>> 8aec6e90a10ff6a8c8a2e20bd76253f5252a6f20
 {
 }
 #endif /* __ELF__*/

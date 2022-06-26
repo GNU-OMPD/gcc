@@ -1,4 +1,3 @@
-
 /* Copyright (C) The GNU Toolchain Authors.
    Contributed by Mohamed Atef <mohamedatef1698@gmail.com>.
    This file is part of the GNU Offloading and Multi Processing Library

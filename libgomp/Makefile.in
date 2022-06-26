@@ -233,7 +233,11 @@ am_libgomp_la_OBJECTS = alloc.lo atomic.lo barrier.lo critical.lo \
 	affinity-fmt.lo teams.lo allocator.lo oacc-profiling.lo \
 	oacc-target.lo ompd-support.lo $(am__objects_1)
 libgomp_la_OBJECTS = $(am_libgomp_la_OBJECTS)
+<<<<<<< HEAD
 am_libgompd_la_OBJECTS = ompd-init.lo ompd-helper.lo ompd-icv.lo ompd-task.lo
+=======
+am_libgompd_la_OBJECTS = ompd-init.lo ompd-helper.lo ompd-icv.lo
+>>>>>>> 8aec6e90a10ff6a8c8a2e20bd76253f5252a6f20
 libgompd_la_OBJECTS = $(am_libgompd_la_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -582,7 +586,11 @@ libgomp_la_SOURCES = alloc.c atomic.c barrier.c critical.c env.c \
 	oacc-async.c oacc-plugin.c oacc-cuda.c priority_queue.c \
 	affinity-fmt.c teams.c allocator.c oacc-profiling.c \
 	oacc-target.c ompd-support.c $(am__append_7)
+<<<<<<< HEAD
 libgompd_la_SOURCES = ompd-init.c ompd-helper.c ompd-icv.c ompd-task.c
+=======
+libgompd_la_SOURCES = ompd-init.c ompd-helper.c ompd-icv.c
+>>>>>>> 8aec6e90a10ff6a8c8a2e20bd76253f5252a6f20
 
 # Nvidia PTX OpenACC plugin.
 @PLUGIN_NVPTX_TRUE@libgomp_plugin_nvptx_version_info = -version-info $(libtool_VERSION)
