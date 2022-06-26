@@ -59,10 +59,15 @@ extern unsigned short gompd_state;
   gompd_access (gomp_thread_pool, threads) \
   gompd_access (gomp_thread, ts) \
   gompd_access (gomp_team_state, team_id) \
+  gompd_access (gomp_task, parent) \
+  gompd_access (gomp_task, fn) \
   gompd_access (gomp_task, icv) \
+  gompd_access (gomp_task, enter_frame) \
+  gompd_access (gomp_task, exit_frame) \
   gompd_access (gomp_task, kind) \
   gompd_access (gomp_task, final_task) \
   gompd_access (gomp_team, nthreads) \
+  gompd_access (gomp_team, implicit_task) \
   gompd_thread_handle_access
 
 #define GOMPD_SIZES(gompd_size) \

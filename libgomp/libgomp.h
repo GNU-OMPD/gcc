@@ -615,6 +615,11 @@ struct gomp_task
   /* Dependencies provided and/or needed for this task.  DEPEND_COUNT
      is the number of items available.  */
   struct gomp_task_depend_entry depend[];
+
+  /* addresses of task frame */  
+  void *enter_frame; 
+  void *exit_frame; 
+
 };
 
 /* This structure describes a single #pragma omp taskgroup.  */

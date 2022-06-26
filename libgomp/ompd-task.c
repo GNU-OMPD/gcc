@@ -34,17 +34,17 @@ ompd_get_curr_task_handle( ompd_thread_handle_t *thread_handle,
       return ompd_rc_bad_input ;
 
    CHECK(thread_handle->ah) ; 
-   
-   ompd_rc_t ret = ompd_rc_ok ; 
 
-   ompd_field_of_struct_t *f  = malloc(sizeof(ompd_field_of_struct_t));
-   ompd_address_t addr ; 
-   gompd_init_target_struct (thread_handle->ah->context, 
-               thread_handle->thread_context, &(thread_handle->th), f) ; 
-   ret = gompd_dereference(f, "gomp_thread", "task" ,&(addr.address)) ;
-   CHECK_RET(ret) ; 
+   ompd_address_t symbol_addr = thread_handle->th;
+   ompd_word_t temp_offset;
+   ompd_address_t temp_sym_addr;
+   ompd_addr_t temp_addr;
+   ompd_address_space_context_t *context = thread_handle->ah->context;
+   ompd_thread_context_t *t_context = thread_handle->thread_context;
+   ompd_rc_t ret;
+   ACCESS_VALUE (context, t_context, "gompd_access_gomp_thread_task",
+    temp_offset, 1, ret, symbol_addr, temp_sym_addr, temp_addr);
 
-   free(f) ; 
 
    // allocate the handle 
    ret = callbacks->alloc_memory(sizeof(ompd_task_handle_t),
@@ -52,79 +52,47 @@ ompd_get_curr_task_handle( ompd_thread_handle_t *thread_handle,
    CHECK_RET(ret) ; 
 
    (*task_handle)->ah = thread_handle->ah ;
-   (*task_handle)->th = addr ;
+   (*task_handle)->th = symbol_addr ;
 
    return ret;
 
 }
-
-/*
-   symbol_addr_lookup(*context,*thread_context,*symbol_name,*symbol_addr,*file_name)
-   read_memory(*context,*thread_context,*addr,nbytes,*buffer)
-   device_to_host(*context,*input,unit_size,count,*output)
-
-   alloc_memory(nbytes,**ptr)
-*/
 
 
 ompd_rc_t
 ompd_get_generating_task_handle( ompd_task_handle_t *task_handle,
    ompd_task_handle_t ** generating_task_handle)
 {
-   if (!task_handle)
-      return ompd_rc_stale_handle;
-  if (!task_handle->ah)
-      return ompd_rc_stale_handle;
-   
-  ompd_address_space_context_t *context = task_handle->ah->context;
-  
-  if (!context)
-      return ompd_rc_stale_handle;
-  if (!callbacks) 
-      return ompd_rc_callback_error;
+   if(task_handle == NULL )
+      return ompd_rc_bad_input ;
 
-   ompd_address_t target_addr = task_handle->th;
-   ompd_address_t temp_offset = {OMPD_SEGMENT_UNSPECIFIED,0};
-   ompd_size_t parent_offset ,converted_offset;
-   
-   ompd_address_t parent_address ; 
+   CHECK(task_handle->ah) ; 
+
+   ompd_address_t symbol_addr = task_handle->th;
+   ompd_word_t temp_offset;
+   ompd_address_t temp_sym_addr;
+   ompd_addr_t temp_addr;
+   ompd_address_space_context_t *context = task_handle->ah->context;
+   ompd_thread_context_t *t_context = NULL;
+   ompd_rc_t ret;
+
+   ACCESS_VALUE (context, t_context, "gompd_access_gomp_task_parent", 
+    temp_offset, 1, ret, symbol_addr, temp_sym_addr, temp_addr);
 
 
-   ompd_rc_t ret =  ompd_rc_stale_handle;
-// required: accessing the task that the *task_handle points to, to get the parent task
-// locate the address of that parent
-// make the *generating_task_handle points to that location.
-
-   //get the offset (address) of the parent task (gomp_task->parent), the final offset is stored in converted_offset 
-   char symbol_name[] = "ompd_access_gomp_task_parent"; 
-   ret = callbacks->symbol_addr_lookup(context, NULL, symbol_name, &temp_offset, NULL);
-
-   ret = callbacks->read_memory(context,NULL,&temp_offset,target_sizes.sizeof_long_long,&parent_offset);
-
-	ret = callbacks->device_to_host(context,&parent_offset, target_sizes.sizeof_long_long,1,&converted_offset);
-
-   //calculating the real address of the parent field in gomp_task:
-   parent_address.address = target_addr.address + converted_offset; 
-
-   //allocating memory for the generating_task_handle:
+   // allocate the handle 
    ret = callbacks->alloc_memory(sizeof(ompd_task_handle_t),
-                                 (void **)(generating_task_handle));
+			(void **)(generating_task_handle));
+   CHECK_RET(ret) ; 
 
-   if (ret != ompd_rc_ok)
-      return ret;
-
-   //assigning generating_task_handle fields' values:
-
-   (*generating_task_handle)->th = parent_address;
+   (*generating_task_handle)->th = symbol_addr;
    (*generating_task_handle)->ah = task_handle->ah;
 
    return ret;
 }
-/*
-   input : *parallel_handle , thread_num (selects the required implicit task)
-   output: make *task_handle pointer points to where the required implicit task will be located
-   required : access gomp_team.implicit_tasks[thread_num]
-*/
+
+
+// TODO: should check for the thread_num <= threads in paralell region
 
 ompd_rc_t
 ompd_get_task_in_parallel(
@@ -133,63 +101,48 @@ ompd_get_task_in_parallel(
     ompd_task_handle_t **task_handle 
 ) {
 
-   if (!parallel_handle)
-      return ompd_rc_stale_handle;
-   
-   if (!parallel_handle->ah)
-      return ompd_rc_stale_handle;
 
+   if(task_handle == NULL )
+      return ompd_rc_bad_input ;
+
+   CHECK(parallel_handle->ah) ; 
+
+  
+   ompd_address_t task_addr = parallel_handle->th;
+   ompd_word_t temp_offset;
+   ompd_address_t temp_sym_addr;
+   ompd_addr_t temp_addr;
    ompd_address_space_context_t *context = parallel_handle->ah->context;
+   ompd_thread_context_t *t_context = NULL;
+   ompd_rc_t ret; 
+   ompd_word_t nthreads; 
+   ompd_word_t task_size = 0;
+   ompd_address_t symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
 
-   ompd_address_t target_addr = parallel_handle->th; 
-   if (!context)
-      return ompd_rc_stale_handle;
+   ret = gompd_get_team_size(parallel_handle , &nthreads );
+   CHECK_RET(ret) ; 
+   if (thread_num >= nthreads)
+      return ompd_rc_incompatible ;  
 
-  if (!callbacks) 
-    return ompd_rc_callback_error;
-  
-   ompd_rc_t ret ;
-   // ompd_word_t team_threads ; //stores the number of threads of the input parallel handle
-   
-   // ret = ompd_get_num_threads(parallel_handle, &team_threads);
-   // if(ret != ompd_rc_ok){
-   //    return ret ;
-   // }
-   // //check if the input thread_num is in the range of 0 to team_threads
-   // if(thread_num <= 0 || thread_num > team_threads){
-   //    return ompd_rc_bad_input ;
-   // }
-  
-   ompd_address_t temp_offset = {OMPD_SEGMENT_UNSPECIFIED,0};
-   ompd_size_t implicit_offset ,converted_offset; // stores the offset to get the location of gomp_team.implicit_task
-   ompd_address_t implicit_task_address ; //stores the output reading of device to host operation
-   
-   //looking up for implicit_task array in gomp_team
-   char symbol_name[] = "implicit_task";
-   ret = callbacks->symbol_addr_lookup(context, NULL, symbol_name, &temp_offset, NULL);
+   ACCESS_VALUE (context, t_context, "gompd_access_gomp_team_implicit_task", 
+    temp_offset, 1, ret, task_addr, temp_sym_addr, temp_addr);
 
-   ret = callbacks->read_memory(context, NULL, &temp_offset, target_sizes.sizeof_long_long, &implicit_offset);
-   
-   ret = callbacks->device_to_host(context,&implicit_offset, target_sizes.sizeof_long_long,1,&converted_offset);
+   GET_VALUE (context, t_context, "gompd_sizeof_gomp_task", task_size, 
+      task_size,  target_sizes.sizeof_short, 1, ret, symbol_addr);
 
-   if(ret != ompd_rc_ok){
-      return ret;
-   }
+   task_addr.address += (thread_num * task_size) ;    
 
-   
-   implicit_task_address.address = (target_addr.address + converted_offset*thread_num);
-
+   // allocate the handle 
    ret = callbacks->alloc_memory(sizeof(ompd_task_handle_t),
-                                 (void **)(task_handle));
+			(void **)(task_handle));
+   CHECK_RET(ret) ; 
 
-   if (ret != ompd_rc_ok){
-      return ret;
-   }
-
-   (*task_handle)->th = implicit_task_address;
+   (*task_handle)->th = task_addr;
    (*task_handle)->ah = parallel_handle->ah;
-   
-   return ret ;
+
+
+   return ret; 
+
 }
 
 ompd_rc_t
@@ -210,8 +163,8 @@ ompd_rc_t
 ompd_task_handle_compare(
    ompd_task_handle_t *task_handle_1,
    ompd_task_handle_t *task_handle_2,
-   int *cmp_value
-){
+   int *cmp_value)
+{
    if (!task_handle_1)
       return ompd_rc_stale_handle;
    if (!task_handle_2)
@@ -236,31 +189,70 @@ ompd_get_task_function ( ompd_task_handle_t * task_handle,
 
    CHECK(task_handle->ah) ; 
 
-	// task.icv.target_data->tgt_start => will return the entry point of 
-	// task
-   ompd_rc_t ret = ompd_rc_ok ; 
+   ompd_address_t symbol_addr = task_handle->th;
+   ompd_word_t temp_offset;
+   ompd_address_t temp_sym_addr;
+   ompd_addr_t temp_addr;
+   ompd_address_space_context_t *context = task_handle->ah->context;
+   ompd_rc_t ret;
+   ACCESS_VALUE (context, NULL, "gompd_access_gomp_task_fn",
+    temp_offset, 1, ret, symbol_addr, temp_sym_addr, temp_addr);
 
-   ompd_field_of_struct_t *f = malloc(sizeof(ompd_field_of_struct_t));
-   ompd_addr_t addr ;
-   gompd_init_target_struct (task_handle->ah->context, NULL, 
-            &(task_handle->th), f) ; 
-   // ret = gompd_dereference(f, "gomp_task", "icv" ,&(f->addr.address)) ;
-   ret = gompd_adresses(f,"gomp_task" , "icv") ; 
-   CHECK_RET(ret) ; 
-   ret = gompd_dereference(f, "gomp_task_icv", "target_data", 
-               &(f->addr.address));
-   CHECK_RET(ret) ; 
-   ret = gompd_adresses(f,"target_mem_desc" , "target_mem_desc") ; 
-   CHECK_RET(ret) ; 
-   ret = gompd_read_value(f, &addr, false) ; 
-   CHECK_RET(ret) ; 
-
-   free(f) ; 
-   // allocate the handle 
    ret = callbacks->alloc_memory(sizeof(ompd_address_t),
 			(void **)(entry_point));
    CHECK_RET(ret) ; 
-   entry_point->address = addr ;    
+   entry_point->address = symbol_addr.address;  
+    
 
 	return ompd_rc_ok ;
+}
+
+// ompd_rc_t 
+// ompd_get_scheduling_task_handle( ompd_task_handle_t *task_handle, 
+//             ompd_task_handle_t **scheduling_task_handle )
+// {
+
+// }
+  
+
+ompd_rc_t
+ompd_get_task_frame (  ompd_task_handle_t *task_handle, 
+         ompd_frame_info_t *exit_frame, 
+         ompd_frame_info_t *enter_frame)
+{
+   if(task_handle == NULL )
+      return ompd_rc_bad_input ;
+
+   CHECK(task_handle->ah) ; 
+
+
+   ompd_address_t exit_addr = task_handle->th;
+   ompd_address_t enter_addr = task_handle->th;
+   ompd_word_t temp_offset;
+   ompd_address_t temp_sym_addr;
+   ompd_addr_t temp_addr;
+   ompd_address_space_context_t *context = task_handle->ah->context;
+   ompd_rc_t ret;
+
+   ACCESS_VALUE (context, NULL, "gompd_access_gomp_task_exit_frame",
+    temp_offset, 1, ret, exit_addr, temp_sym_addr, temp_addr);
+
+   ACCESS_VALUE (context, NULL, "gompd_access_gomp_task_enter_frame",
+    temp_offset, 1, ret, enter_addr, temp_sym_addr, temp_addr);
+
+   ret = callbacks->alloc_memory(sizeof(ompd_frame_info_t),
+			(void **)(exit_frame));
+   CHECK_RET(ret) ; 
+
+   ret = callbacks->alloc_memory(sizeof(ompd_frame_info_t),
+			(void **)(enter_frame));
+   CHECK_RET(ret); 
+
+   exit_frame->frame_address = exit_addr ;
+   exit_frame->frame_flag =  ompt_frame_runtime | ompt_frame_framepointer ; 
+   enter_frame->frame_address = enter_addr ;  
+   enter_frame->frame_flag =  ompt_frame_runtime | ompt_frame_framepointer ; 
+
+   return ompd_rc_ok ;  
+
 }

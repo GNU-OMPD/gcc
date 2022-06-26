@@ -49,6 +49,15 @@ typedef struct ompd_address_t
 	ompd_addr_t address;
 } ompd_address_t;
 
+typedef enum ompt_frame_flag_t { 
+  ompt_frame_runtime        = 0x00, 
+  ompt_frame_application    = 0x01, 
+  ompt_frame_cfa            = 0x10, 
+  ompt_frame_framepointer   = 0x20, 
+  ompt_frame_stackaddress   = 0x30 
+} ompt_frame_flag_t;
+
+
 typedef struct ompd_frame_info_t
 {
 	ompd_address_t frame_address;
