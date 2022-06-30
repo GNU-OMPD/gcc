@@ -29,26 +29,20 @@
 #include "ompd-helper.h"
 
 ompd_rc_t
-ompd_get_thread_in_parallel (ompd_parallel_handle_t *parallel_handle, int
-			     thread_num, ompd_thread_handle_t **thread_handle)
+ompd_get_thread_in_parallel (ompd_parallel_handle_t *parallel_handle,
+			     int thread_num,
+			     ompd_thread_handle_t **thread_handle)
 {
 
   if (parallel_handle == NULL)
     return ompd_rc_stale_handle;
-  if (parallel_handle->ah == NULL)
-    return ompd_rc_stale_handle;
+  CHECK (parallel_handle->ah);
 
   ompd_address_space_context_t *context = parallel_handle->ah->context;
   ompd_rc_t ret;
 
-  if (!context)
-    return ompd_rc_stale_handle;
-
-  if (!callbacks)
-    return ompd_rc_callback_error;
-
   ompd_word_t team_size_var = 1;
-  if (parallel_handle->th != NULL)
+  if (parallel_handle->th.address)
     gompd_get_team_size(parallel_handle, &team_size_var);
 
   if (thread_num < 0 || thread_num >= team_size_var)
@@ -58,18 +52,18 @@ ompd_get_thread_in_parallel (ompd_parallel_handle_t *parallel_handle, int
   ompd_address_t temp_symbol_addr, symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
   ompd_addr_t temp_addr;
 
-  ACCESS_VALUE(context, NULL, "gompd_access_gomp_thread_pool_threads",
-  	       temp_offset, 1, ret, symbol_addr, temp_symbol_addr, temp_addr);
+  ACCESS_VALUE (context, NULL, "gompd_access_gomp_thread_pool_threads",
+		temp_offset, 1, ret, symbol_addr, temp_symbol_addr, temp_addr);
 
   symbol_addr.address += thread_num * target_sizes.sizeof_pointer;
 
-  DEREFERENCE(context, NULL, symbol_addr, target_sizes.sizeof_pointer, 1,
-	      temp_addr, ret, 1);
+  DEREFERENCE (context, NULL, symbol_addr, target_sizes.sizeof_pointer, 1,
+	       temp_addr, ret, 1);
 
   ret = callbacks->alloc_memory (sizeof (ompd_thread_handle_t),
-  				 (void **) thread_handle);
+				 (void **) thread_handle);
 
-  CHECK_RET(ret);
+  CHECK_RET (ret);
 
   if (symbol_addr.address == 0)
     return ompd_rc_unsupported;
@@ -88,9 +82,7 @@ ompd_get_thread_handle (ompd_address_space_handle_t *handle,
 			const void *thread_id,
 			ompd_thread_handle_t **thread_handle)
 {
-  if (!handle)
-    return ompd_rc_stale_handle;
-
+  CHECK (handle);
   if (kind != OMPD_THREAD_ID_PTHREAD)
     return ompd_rc_unsupported;
 
@@ -98,28 +90,25 @@ ompd_get_thread_handle (ompd_address_space_handle_t *handle,
   ompd_thread_context_t *tcontext;
   ompd_rc_t ret;
 
-  if (!context)
-    return ompd_rc_stale_handle;
-
   ret = callbacks->get_thread_context_for_thread_id (context, kind,
-	  					     sizeof_thread_id,
+						     sizeof_thread_id,
 						     thread_id, &tcontext);
-  CHECK_RET(ret);
+  CHECK_RET (ret);
 
   ompd_size_t temp_symbol_size, symbol_size;
   ompd_address_t temp_symbol_addr, symbol_addr = {OMPD_SEGMENT_UNSPECIFIED, 0};
 
-  GET_VALUE(context, NULL, "gompd_sizeof_gomp_thread", symbol_size,
-  	    temp_symbol_size, target_sizes.sizeof_short, 1, ret,
-	    temp_symbol_addr);
+  GET_VALUE (context, NULL, "gompd_sizeof_gomp_thread", symbol_size,
+	     temp_symbol_size, target_sizes.sizeof_short, 1, ret,
+	     temp_symbol_addr);
 
-  GET_VALUE(context, tcontext, "gomp_tls_data", symbol_addr.address,
-  	    temp_symbol_addr.address, symbol_size, 1, ret, symbol_addr);
+  GET_VALUE (context, tcontext, "gomp_tls_data", symbol_addr.address,
+	     temp_symbol_addr.address, symbol_size, 1, ret, symbol_addr);
 
-  ret = callbacks->alloc_memory (sizeof(ompd_thread_handle_t), (void **)
-  				 (thread_handle));
+  ret = callbacks->alloc_memory (sizeof (ompd_thread_handle_t),
+				 (void **) thread_handle);
 
-  CHECK_RET(ret);
+  CHECK_RET (ret);
 
   (*thread_handle)->ah = handle;
   (*thread_handle)->th = symbol_addr;
@@ -143,23 +132,21 @@ ompd_rel_thread_handle (ompd_thread_handle_t *thread_handle)
 }
 
 
-/* return -1, 0 or 1 for thread_handle_1 <, == or > thread_handle_2. */
+/* return -1, 0 or 1 for thread_handle_1 <, == or > thread_handle_2.  */
 ompd_rc_t
 ompd_thread_handle_compare (ompd_thread_handle_t *thread_handle_1,
 			    ompd_thread_handle_t *thread_handle_2,
 			    int	*cmp_value )
 {
 
-  if (thread_handle_1 == NULL)
-    return ompd_rc_stale_handle;
-  if (thread_handle_2 == NULL)
+  if (thread_handle_1 == NULL || thread_handle_2 == NULL)
     return ompd_rc_stale_handle;
   if (cmp_value == NULL)
     return ompd_rc_bad_input;
   if (thread_handle_1->ah->kind != thread_handle_2->ah->kind)
     return ompd_rc_bad_input;
-  *cmp_value = thread_handle_1->th.address - thread_handle_2->th.address;
 
+  *cmp_value = thread_handle_1->th.address - thread_handle_2->th.address;
   return ompd_rc_ok;
 }
 
@@ -172,12 +159,11 @@ ompd_get_thread_id (ompd_thread_handle_t *thread_handle, ompd_thread_id_t kind,
     return ompd_rc_unsupported;
   if (thread_id == NULL)
     return ompd_rc_bad_input;
-  if (!thread_handle || !thread_handle->ah)
+  if (thread_handle == NULL)
     return ompd_rc_stale_handle;
 
+  CHECK (thread_handle->ah);
   ompd_address_space_context_t *context = thread_handle->ah->context;
-  if (context == NULL)
-    return ompd_rc_stale_handle;
 
   ompd_rc_t ret;
   ompd_address_t taddr = thread_handle->th;
@@ -185,17 +171,17 @@ ompd_get_thread_id (ompd_thread_handle_t *thread_handle, ompd_thread_id_t kind,
   ompd_size_t temp_symbol_size, symbol_size;
   ompd_word_t temp_offset, offset;
 
-  GET_VALUE(context, NULL, "gompd_sizeof_gomp_thread_handle", symbol_size,
-	    temp_symbol_size, target_sizes.sizeof_short, 1, ret, symbol_addr);
+  GET_VALUE (context, NULL, "gompd_sizeof_gomp_thread_handle", symbol_size,
+	     temp_symbol_size, target_sizes.sizeof_short, 1, ret, symbol_addr);
 
-  if (symbol_size == 0):
+  if (symbol_size == 0)
     goto use_tls_bias;
 
   if (sizeof_thread_id != symbol_size)
     return ompd_rc_bad_input;
 
-  GET_VALUE(context, NULL, "gompd_access_gomp_thread_handle", offset,
-  	    temp_offset, target_sizes.sizeof_short, 1, ret, symbol_addr);
+  GET_VALUE (context, NULL, "gompd_access_gomp_thread_handle", offset,
+	     temp_offset, target_sizes.sizeof_short, 1, ret, symbol_addr);
   taddr.address += offset;
 
   ret = callbacks->read_memory (context, NULL, &taddr, symbol_size, thread_id);
@@ -203,15 +189,15 @@ ompd_get_thread_id (ompd_thread_handle_t *thread_handle, ompd_thread_id_t kind,
 
 use_tls_bias:
 
-  GET_VALUE(context, NULL, "gompd_thread_initial_tls_bias", offset, temp_offset,
-	    target_sizes.sizeof_long, 1, ret, symbol_addr)
+  GET_VALUE (context, NULL, "gompd_thread_initial_tls_bias", offset, temp_offset,
+	     target_sizes.sizeof_long, 1, ret, symbol_addr);
 
   ret = callbacks->symbol_addr_lookup (context, NULL,"gomp_tls_data",
 				       &symbol_addr, NULL);
   ret = callbacks->device_to_host (context, &temp_symbol_addr.address,
 				   target_sizes.sizeof_long_long, 1,
 				   &symbol_addr.address);
-  CHECK_RET(ret);
+  CHECK_RET (ret);
 
   taddr.address = symbol_addr.address + offset;
   ret = callbacks->read_memory (context, NULL, &taddr,
@@ -220,7 +206,7 @@ use_tls_bias:
 }
 
 
-/* OMPD doesn't support GPUs for now. */
+/* OMPD doesn't support GPUs for now.  */
 ompd_rc_t ompd_get_device_from_thread (ompd_thread_handle_t *thread_handle,
 				       ompd_address_space_handle_t **device)
 {

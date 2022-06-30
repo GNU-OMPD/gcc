@@ -75,7 +75,9 @@ gomp_thread_start (void *xdata)
   struct gomp_thread_pool *pool;
   void (*local_fn) (void *);
   void *local_data;
+
   ompd_bp_thread_begin ();
+
 #if defined HAVE_TLS || defined USE_EMUTLS
   thr = &gomp_tls_data;
 #else
@@ -312,6 +314,9 @@ gomp_free_thread (void *arg __attribute__((unused)))
       gomp_end_task ();
       free (task);
     }
+
+  ompd_bp_thread_end ();
+
 }
 
 /* Launch a team.  */
@@ -322,7 +327,6 @@ gomp_team_start (void (*fn) (void *), void *data, unsigned nthreads,
 		 unsigned flags, struct gomp_team *team,
 		 struct gomp_taskgroup *taskgroup)
 {
-  ompd_bp_parallel_begin ();
   struct gomp_thread_start_data *start_data = NULL;
   struct gomp_thread *thr, *nthr;
   struct gomp_task *task;

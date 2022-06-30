@@ -65,6 +65,10 @@ libgompd.ver-sun : libgompd.ver \
 	 `echo $(libgompd_la_LIBADD) | \
 	    sed 's,/\([^/.]*\)\.la,/.libs/\1.a,g'` \
 	 > $@ || (rm -f $@ ; exit 1)
+endif
+else
+libgomp_version_script =
+libgompd_version_script =
 libgomp_version_dep =
 libgompd_version_dep =
 endif
@@ -90,9 +94,8 @@ libgomp_la_SOURCES = alloc.c atomic.c barrier.c critical.c env.c error.c \
 	priority_queue.c affinity-fmt.c teams.c allocator.c oacc-profiling.c \
 	oacc-target.c ompd-support.c
 
-libgompd_la_SOURCES = ompd-init.c ompd-helper.c ompd-icv.c
+libgompd_la_SOURCES = ompd-init.c ompd-helper.c ompd-icv.c ompd-threads.c
 
-libgompd_la_SOURCES = ompd-init.c ompd-helper.c ompd-icv.c
 include $(top_srcdir)/plugin/Makefrag.am
 
 if USE_FORTRAN

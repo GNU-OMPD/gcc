@@ -27,13 +27,14 @@
 #endif
 
 #ifndef GOMP_NEEDS_THREAD_HANDLE
+const unsigned short gompd_access_gomp_thread_handle
+  __attribute__ ((used)) OMPD_SECTION = 0;
 const unsigned short gompd_sizeof_gomp_thread_handle
   __attribute__ ((used)) OMPD_SECTION = 0;
 #endif
 
-long gompd_thread_initial_tls_bias __attribute__ ((used)) OMPD_SECTION \
-  = ((char *) &gomp_tls_data - (char *) pthread_self ());
-  
+unsigned long gompd_thread_initial_tls_bias __attribute__ ((used));
+
 /* Get offset of the member m in struct t.  */
 #define gompd_get_offset(t, m) \
   const unsigned short gompd_access_##t##_##m __attribute__ ((used)) \
@@ -68,6 +69,9 @@ gompd_load (void)
   gompd_state |= OMPD_ENABLED;
   ompd_dll_locations = &ompd_dll_locations_array[0];
   ompd_dll_locations_valid ();
+
+  gompd_thread_initial_tls_bias = (unsigned long) ((char *) &gomp_tls_data
+  						   - (char *) pthread_self ());
 }
 
 #ifndef __ELF__
