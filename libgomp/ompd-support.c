@@ -58,6 +58,11 @@ const unsigned short gompd_sizeof_gomp_thread_handle
 const char **ompd_dll_locations = NULL;
 unsigned short gompd_state;
 
+const unsigned short 
+gompd_access_gomp_team_implicit_task __attribute__ ((used)) 
+	OMPD_SECTION
+	  = (unsigned short) offsetof (struct gomp_team, implicit_task);
+
 void
 gompd_load (void)
 {
