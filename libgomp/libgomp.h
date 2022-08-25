@@ -41,11 +41,12 @@
 #define _LIBGOMP_CHECKING_ 0
 #endif
 
+
 #include "config.h"
 #include <stdint.h>
 #include "libgomp-plugin.h"
 #include "gomp-constants.h"
-#include "ompd-support.h"
+
 
 #ifdef HAVE_PTHREAD_H
 #include <pthread.h>
@@ -1000,8 +1001,6 @@ gomp_finish_task (struct gomp_task *task)
   if (__builtin_expect (task->depend_hash != NULL, 0))
     free (task->depend_hash);
 
-  if(gompd_state)
-    ompd_bp_task_end();	
 }
 
 /* team.c */

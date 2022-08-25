@@ -26,7 +26,7 @@
 /* gomp_thread-> task */  
 ompd_rc_t
 ompd_get_curr_task_handle (ompd_thread_handle_t *thread_handle,
-			   ompd_task_handle_t ** task_handle)
+			   ompd_task_handle_t **task_handle)
 {
   if (thread_handle == NULL)
     return ompd_rc_bad_input;
@@ -81,7 +81,7 @@ ompd_get_generating_task_handle (ompd_task_handle_t *task_handle,
   return ret;
 }
 
-/* gomp_team->implicit_task[thread_num] */ 
+/* gomp_team->implicit_task[thread_num]  */ 
 ompd_rc_t
 ompd_get_task_in_parallel (ompd_parallel_handle_t *parallel_handle,
 			   int thread_num, ompd_task_handle_t **task_handle)
