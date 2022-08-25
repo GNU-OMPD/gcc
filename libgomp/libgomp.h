@@ -45,6 +45,7 @@
 #include <stdint.h>
 #include "libgomp-plugin.h"
 #include "gomp-constants.h"
+#include "ompd-support.h"
 
 #ifdef HAVE_PTHREAD_H
 #include <pthread.h>
@@ -615,11 +616,6 @@ struct gomp_task
   /* Dependencies provided and/or needed for this task.  DEPEND_COUNT
      is the number of items available.  */
   struct gomp_task_depend_entry depend[];
-
-  /* addresses of task frame */  
-  void *enter_frame; 
-  void *exit_frame; 
-
 };
 
 /* This structure describes a single #pragma omp taskgroup.  */
@@ -1003,6 +999,9 @@ gomp_finish_task (struct gomp_task *task)
 {
   if (__builtin_expect (task->depend_hash != NULL, 0))
     free (task->depend_hash);
+
+  if(gompd_state)
+    ompd_bp_task_end();	
 }
 
 /* team.c */

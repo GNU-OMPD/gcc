@@ -31,6 +31,7 @@
 #include <string.h>
 #include <assert.h>
 #include "gomp-constants.h"
+#include "ompd-support.h"
 
 typedef struct gomp_task_depend_entry *hash_entry_type;
 
@@ -74,6 +75,7 @@ gomp_init_task (struct gomp_task *task, struct gomp_task *parent_task,
      Note, the nqueens-1.c test in serial mode is a good test to
      benchmark the overhead of creating tasks as there are millions of
      tiny tasks created that all run undeferred.  */
+
   task->parent = parent_task;
   priority_queue_init (&task->children_queue);
   task->taskgroup = NULL;
@@ -90,6 +92,8 @@ gomp_init_task (struct gomp_task *task, struct gomp_task *parent_task,
   task->final_task = false;
   task->copy_ctors_done = false;
   task->parent_depends_on = false;
+  if(gompd_state)
+    ompd_bp_task_begin();	
 }
 
 /* Clean up a task, after completing it.  */
