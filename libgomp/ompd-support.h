@@ -89,6 +89,8 @@ extern unsigned short gompd_state;
   gompd_access (gomp_thread_pool, threads) \
   gompd_access (gomp_thread, ts) \
   gompd_access (gomp_team_state, team_id) \
+  gompd_access (gomp_task, parent) \
+  gompd_access (gomp_task, fn) \
   gompd_access (gomp_task, icv) \
   gompd_access (gomp_task, kind) \
   gompd_access (gomp_task, final_task) \
