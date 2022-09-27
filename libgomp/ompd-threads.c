@@ -43,7 +43,7 @@ ompd_get_thread_in_parallel (ompd_parallel_handle_t *parallel_handle,
 
   ompd_word_t team_size_var = 1;
   if (parallel_handle->th.address)
-    gompd_get_team_size(parallel_handle, &team_size_var);
+    gompd_get_team_size (parallel_handle, &team_size_var);
 
   if (thread_num < 0 || thread_num >= team_size_var)
     return ompd_rc_bad_input;
@@ -132,11 +132,11 @@ ompd_rel_thread_handle (ompd_thread_handle_t *thread_handle)
 }
 
 
-/* return -1, 0 or 1 for thread_handle_1 <, == or > thread_handle_2.  */
+/* Return -1, 0 or 1 for thread_handle_1 <, == or > thread_handle_2.  */
 ompd_rc_t
 ompd_thread_handle_compare (ompd_thread_handle_t *thread_handle_1,
 			    ompd_thread_handle_t *thread_handle_2,
-			    int	*cmp_value )
+			    int	*cmp_value)
 {
 
   if (thread_handle_1 == NULL || thread_handle_2 == NULL)
@@ -146,7 +146,13 @@ ompd_thread_handle_compare (ompd_thread_handle_t *thread_handle_1,
   if (thread_handle_1->ah->kind != thread_handle_2->ah->kind)
     return ompd_rc_bad_input;
 
-  *cmp_value = thread_handle_1->th.address - thread_handle_2->th.address;
+  if (thread_handle_1->th.address < thread_handle_2->th.address)
+    *cmp_value = -1;
+  else if (thread_handle_1->th.address > thread_handle_2->th.address)
+    *cmp_value = 1;
+  else
+    *cmp_value = 0;
+
   return ompd_rc_ok;
 }
 
@@ -175,33 +181,33 @@ ompd_get_thread_id (ompd_thread_handle_t *thread_handle, ompd_thread_id_t kind,
 	     temp_symbol_size, target_sizes.sizeof_short, 1, ret, symbol_addr);
 
   if (symbol_size == 0)
-    goto use_tls_bias;
+    {
+      GET_VALUE (context, NULL, "gompd_thread_initial_tls_bias", offset,
+		 temp_offset, target_sizes.sizeof_long, 1, ret, symbol_addr);
 
-  if (sizeof_thread_id != symbol_size)
-    return ompd_rc_bad_input;
+      ret = callbacks->symbol_addr_lookup (context, NULL,"gomp_tls_data",
+					   &symbol_addr, NULL);
+      ret = callbacks->device_to_host (context, &temp_symbol_addr.address,
+				       target_sizes.sizeof_long_long, 1,
+				       &symbol_addr.address);
+      CHECK_RET (ret);
 
-  GET_VALUE (context, NULL, "gompd_access_gomp_thread_handle", offset,
-	     temp_offset, target_sizes.sizeof_short, 1, ret, symbol_addr);
-  taddr.address += offset;
+      taddr.address = symbol_addr.address + offset;
+      ret = callbacks->read_memory (context, NULL, &taddr,
+				    target_sizes.sizeof_long_long, thread_id);
+    }
+  else
+    {
+      if (sizeof_thread_id != symbol_size)
+        return ompd_rc_bad_input;
 
-  ret = callbacks->read_memory (context, NULL, &taddr, symbol_size, thread_id);
-  return ret;
+      GET_VALUE (context, NULL, "gompd_access_gomp_thread_handle", offset,
+		 temp_offset, target_sizes.sizeof_short, 1, ret, symbol_addr);
+      taddr.address += offset;
 
-use_tls_bias:
-
-  GET_VALUE (context, NULL, "gompd_thread_initial_tls_bias", offset, temp_offset,
-	     target_sizes.sizeof_long, 1, ret, symbol_addr);
-
-  ret = callbacks->symbol_addr_lookup (context, NULL,"gomp_tls_data",
-				       &symbol_addr, NULL);
-  ret = callbacks->device_to_host (context, &temp_symbol_addr.address,
-				   target_sizes.sizeof_long_long, 1,
-				   &symbol_addr.address);
-  CHECK_RET (ret);
-
-  taddr.address = symbol_addr.address + offset;
-  ret = callbacks->read_memory (context, NULL, &taddr,
-				target_sizes.sizeof_long_long, thread_id);
+      ret = callbacks->read_memory (context, NULL, &taddr, symbol_size,
+				    thread_id);
+    }
   return ret;
 }
 

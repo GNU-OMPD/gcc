@@ -70,8 +70,10 @@ gompd_load (void)
   ompd_dll_locations = &ompd_dll_locations_array[0];
   ompd_dll_locations_valid ();
 
+  #if defined(LIBGOMP_USE_PTHREADS) && !defined(GOMP_NEEDS_THREAD_HANDLE)
   gompd_thread_initial_tls_bias = (unsigned long) ((char *) &gomp_tls_data
-  						   - (char *) pthread_self ());
+						   - (char *) pthread_self ());
+  #endif
 }
 
 #ifndef __ELF__

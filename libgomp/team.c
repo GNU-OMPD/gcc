@@ -316,7 +316,6 @@ gomp_free_thread (void *arg __attribute__((unused)))
     }
 
   ompd_bp_thread_end ();
-
 }
 
 /* Launch a team.  */
